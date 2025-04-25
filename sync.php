@@ -18,7 +18,7 @@
     for($i=0; $i<mysqli_num_rows($res); ++$i){
       $row = mysqli_fetch_assoc($res);
       $seen = date(strtotime($row['seen']));
-      $now = date('now');
+      $now = time();
       if($now - $seen > 5){
         endSession($row['slug']);
       } else {
