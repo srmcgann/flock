@@ -4,12 +4,13 @@
 
   $input = json_decode(file_get_contents('php://input'));
   if($data = $input->{'playerData'}){
-    $id = $data->{'id'};
+    $id = mysqli_real_escape_string($link, $data->{'id'});
     $timestamp = date("Y-m-d H:i:s");
     $sanitizedData = mysqli_real_escape_string($link, json_encode($data));
     $sql = "UPDATE sessions SET seen = \"$timestamp\",
             data = \"$sanitizedData\"
             WHERE id = $id";
+    mysqli_query($link, $sql);
     
     // maintenance //
     $players = [];
