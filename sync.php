@@ -19,7 +19,7 @@
       $row = mysqli_fetch_assoc($res);
       $seen = date(strtotime($row['seen']));
       $now = date('now');
-      if($now - $seen > 60){
+      if($now - $seen > 5){
         endSession($row['slug']);
       } else {
         array_push($players, $row['data']);
