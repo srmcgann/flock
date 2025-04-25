@@ -17,7 +17,7 @@
     $res = mysqli_query($link, $sql);
     for($i=0; $i<mysqli_num_rows($res); ++$i){
       $row = mysqli_fetch_assoc($res);
-      $seen = time(strtotime($row['seen']));
+      $seen = date(strtotime($row['seen']));
       $now = date('now');
       if($now - $seen > 60){
         endSession($row['slug']);
