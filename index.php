@@ -12,7 +12,7 @@
       const URLbase = 'https://boss.mindhackers.org/flock'
       
       const syncPlayers = data => {
-        console.log(data)
+        console.log(data, playerData)
       }
       
       const launchLocal = data => {
@@ -27,6 +27,7 @@
         position: {x: 0, y: 0, z: 0},
         orientation: {roll: 0, pitch: 0, yaw: 0},
       }
+      
       const coms = (target, callback='') => {
         let sendData = { playerData }
         fetch(`${URLbase}/` + target, {
