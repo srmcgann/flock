@@ -15,7 +15,8 @@
         console.log(data)
       }
       
-      const launchLocal = () => {
+      const launchLocal = data => {
+        playerData = data
         setInterval(() => {
           coms('sync.php', 'syncPlayers')
         }, 1e3)
@@ -35,7 +36,6 @@
           },
           body: JSON.stringify(sendData),
         }).then(res => res.json()).then(data => {
-          playerData = data
           //output.innerHTML = JSON.stringify(playerData)
           if(callback) eval(callback + '(data)')
         })
