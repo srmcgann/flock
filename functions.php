@@ -60,7 +60,9 @@
     $data->{'slug'} = $slug;
     $data->{'name'} = $newName;
     $sanitizedData = mysqli_real_escape_string($link, json_encode($data));
-    $sql = "INSERT INTO sessions (id, slug, data) VALUES($newID, \"$slug\", \"$sanitizedData\")";
+    $timestamp = date("Y-m-d H:i:s");
+    $sql = "INSERT INTO sessions (id, slug, data, timestamp)
+            VALUES($newID, \"$slug\", \"$sanitizedData\", \"$timestamp\")";
     if($res = mysqli_query($link, $sql)){
       return json_encode($data);
     }else{
