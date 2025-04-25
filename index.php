@@ -11,7 +11,7 @@
     
       const URLbase = 'https://boss.mindhackers.org/flock'
       
-      conse syncPlayers = data => {
+      const syncPlayers = data => {
         console.log(data)
       }
       
