@@ -9,24 +9,39 @@
     <div id="output"></div>
     <script>
     
+      const URLbase = 'https://boss.mindhackers.org/flock'
+      
+      conse syncPlayers = data => {
+        console.log(data)
+      }
+      
+      const launchLocal = () => {
+        setInterval(() => {
+          coms('sync.php', 'syncPlayers')
+        }, 1e3)
+      }
+    
       var playerData = {
         name: '', id: 0,
         position: {x: 0, y: 0, z: 0},
         orientation: {roll: 0, pitch: 0, yaw: 0},
       }
-    
-      const URLbase = 'https://boss.mindhackers.org/flock'
-      let sendData = { playerData }
-      fetch(`${URLbase}/` + 'launch.php', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(sendData),
-      }).then(res => res.json()).then(data => {
-        playerData = data
-        output.innerHTML = JSON.stringify(playerData)
-      })
+      const coms = (target, callback='') => {
+        let sendData = { playerData }
+        fetch(`${URLbase}/` + target, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(sendData),
+        }).then(res => res.json()).then(data => {
+          playerData = data
+          //output.innerHTML = JSON.stringify(playerData)
+          if(callback) eval(callback + '(data)')
+        })
+      }
+      
+      coms('launch.php', 'launchLocal')
     </script>
   </body>
 </html>
