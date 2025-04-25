@@ -37,11 +37,28 @@
     return $ret;
   }
   
+  function genName(){
+    $names = explode(' ', str_replace("\n", '', file_get_contents('words.txt')));
+    $newName = '';
+    $usedIDs = [];
+    for($i=0; $i<3; $i++){
+      do{
+        $id = rand(0, sizeof($names)-1);
+      }while(array_search($id, $usedIDs) !== false);
+      array_push($usedIDs, $id);
+      $newName .= $names[$id] . ' ';
+    }
+    return trim($newName);
+  }
+  
   function beginSession($data){
     global $link;
     $newID = getSessionID();
-    $data->{'id'} = $newID;
     $slug = decToAlpha($newID);
+    $newName = genName();
+    $data->{'id'} = $newID;
+    $data->{'slug'} = $slug;
+    $data->{'name'} = $newName;
     $sanitizedData = mysqli_real_escape_string($link, json_encode($data));
     $sql = "INSERT INTO sessions (id, slug, data) VALUES($newID, \"$slug\", \"$sanitizedData\")";
     if($res = mysqli_query($link, $sql)){
