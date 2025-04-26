@@ -56,7 +56,7 @@ $file = <<<FILE
     
       const floor = (X, Z) => {
         //var d = Math.hypot(X, Z) / 500
-        return (S(X/100) * S(Z/100)) * 40
+        return (S(X/200) * S(Z/200)) * 100
       }
       var X, Y, Z
       var cl = 16
@@ -238,7 +238,7 @@ $file = <<<FILE
           //heightMapIntensity: 80,
           playbackSpeed: 1
         }
-        if(0) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
+        if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           Coordinates.SyncNormals(geometry, true, true)
           shapes.push(geometry)
           await shader.ConnectGeometry(geometry)
@@ -269,7 +269,7 @@ $file = <<<FILE
         Coordinates.LoadFPSControls(renderer, {
           flyMode: false,
           mSpeed: 5,
-          flyMode: true,
+          flyMode: false,
           crosshairMap: 'https://boss.mindhackers.org/assets/uploads/1rvQ0b.webp',
           crosshairSel: 3,
           crosshairSize: .25
@@ -361,18 +361,20 @@ $file = <<<FILE
                   Coordinates.Overlay.ctx.lineTo(pt[0]+lx/d*rad*10,
                                                  pt[1]+ly/d*rad*2.2)
 
-                  Coordinates.Overlay.ctx.globalAlpha = .1
+                  Coordinates.Overlay.ctx.globalAlpha = .05
                   Coordinates.Overlay.ctx.lineWidth = 8
                   Coordinates.Overlay.ctx.stroke()
-                  Coordinates.Overlay.ctx.globalAlpha = .5
+                  Coordinates.Overlay.ctx.globalAlpha = .25
                   Coordinates.Overlay.ctx.lineWidth = 2
                   Coordinates.Overlay.ctx.stroke()
                   
-                  Coordinates.Overlay.ctx.font = '32px monospace'
+                  Coordinates.Overlay.ctx.globalAlpha = .8
+                  var fs
+                  Coordinates.Overlay.ctx.font = (fs = 16) + 'px courier new'
                   Coordinates.Overlay.ctx.fillStyle = '#fff'
                   lx = pt[0]+lx/d*rad*3
                   ly = pt[1]+ly/d*rad*2.2
-                  Coordinates.Overlay.ctx.fillText(player.name,lx, ly)
+                  Coordinates.Overlay.ctx.fillText(player.name,lx, ly-fs/2.5)
                 }
               })
             break
@@ -448,35 +450,46 @@ $file = <<<FILE
       const URLbase = 'https://boss.mindhackers.org/flock'
       
       const syncPlayers = data => {
-        players = data.map(player=>JSON.parse(player))
-        iplayers.map(v=>v.keep = false)
+        players = data.map(player => {
+          player = JSON.parse(player)
+          player.id = +player.id
+          return player
+        })
+        iplayers.map(v=>{ v.keep = false})
         players.map(player => {
-          var l = iplayers.filter(v=>(+v.id)==(+player.id))
+          var l = iplayers.filter(v=> (+v.id == +player.id))
           if(l.length){
             //l[0].name  = player.name
             //l[0].id    = player.id
-            l[0].x     = player.x
-            l[0].y     = player.y
-            l[0].z     = player.z
-            l[0].roll  = player.roll
-            l[0].pitch = player.pitch
-            l[0].yaw   = player.yaw
-            l[0].keep  = true
+            var v = l[0]
+            v.x     = player.x
+            v.y     = player.y
+            v.z     = player.z
+            v.roll  = player.roll
+            v.pitch = player.pitch
+            v.yaw   = player.yaw
+            v.keep  = true
           }else{
-            var newObj = structuredClone(iplayerData)
-            newObj.name  = newObj.name   = player.name
-            newObj.id    = newObj.id     = +player.id
+            var newObj = {
+              name: '', id: -1,
+              x: 0, y: 0, z: 0,
+              roll: 0, pitch: 0, yaw: 0,
+              ix: 0, iy: 0, iz: 0,
+              iroll: 0, ipitch: 0, iyaw: 0,
+              keep: true,
+            }
+            newObj.name  = player.name
+            newObj.id    = +player.id
             newObj.x     = newObj.ix     = player.x
             newObj.y     = newObj.iy     = player.y
             newObj.z     = newObj.iz     = player.z
             newObj.roll  = newObj.iroll  = player.roll
             newObj.pitch = newObj.ipitch = player.pitch
             newObj.yaw   = newObj.iyaw   = player.yaw
-            newObj.keep  = true
-            iplayers = [...iplayers, newObj]
+            iplayers.push(newObj)
           }
-          iplayers = iplayers.filter(v=>v.keep)
         })
+        iplayers = iplayers.filter(v=>v.keep)
       }
       
       const launchLocalClient = data => {
@@ -491,16 +504,6 @@ $file = <<<FILE
         name: '', id: -1,
         x: 0, y: 0, z: 0,
         roll: 0, pitch: 0, yaw: 0,
-      }
-      
-      // interpolated (smoothing/local) values
-      var iplayerData = {
-        name: '', id: -1,
-        x: 0, y: 0, z: 0,
-        roll: 0, pitch: 0, yaw: 0,
-        ix: 0, iy: 0, iz: 0,
-        iroll: 0, ipitch: 0, iyaw: 0,
-        keep: false,
       }
       
       const coms = (target, callback='') => {
@@ -534,7 +537,8 @@ $file = <<<FILE
 </html>
 
 
+
+
 FILE;
-@unlink('../../flock/index.php');
 file_put_contents('../../flock/index.html', $file);
 ?>
