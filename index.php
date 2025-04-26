@@ -246,7 +246,7 @@
           //heightMapIntensity: 80,
           playbackSpeed: 1
         }
-        await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
+        if(0) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           Coordinates.SyncNormals(geometry, true, true)
           shapes.push(geometry)
           await shader.ConnectGeometry(geometry)
@@ -272,7 +272,7 @@
           penumbra: .5,
           color: 0x88ffcc,
         }
-        await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
+        if(0)await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           shapes.push(geometry)
         })  
         
