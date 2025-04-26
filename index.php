@@ -54,8 +54,8 @@
     
       var playerData = {
         name: '', id: 0,
-        position: {x: 0, y: 0, z: 0},
-        orientation: {roll: 0, pitch: 0, yaw: 0},
+        x: 0, y: 0, z: 0,
+        roll: 0, pitch: 0, yaw: 0,
       }
       
       const coms = (target, callback='') => {
