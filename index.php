@@ -310,9 +310,9 @@
       
       window.Draw = () => {
         
-        playerData.x = -renderer.x
+        playerData.x = renderer.x
         playerData.y = -renderer.y
-        playerData.z = -renderer.z
+        playerData.z = renderer.z
         playerData.roll = -renderer.roll
         playerData.pitch = -renderer.pitch
         playerData.yaw = -renderer.yaw
