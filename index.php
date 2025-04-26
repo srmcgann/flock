@@ -173,7 +173,7 @@
           lum: 120,
           color: 0xffffff,
         }
-        if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
+        if(0) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           shapes.push(geometry)
         })
 
@@ -296,10 +296,12 @@
       }
       
       var geoOptions = {
-        shapeType: 'sprite',
+        shapeType: 'point light',
+        showSource: true,
+        lum: 100,
+        color: 0xffffff,
         name: 'player graphic',
-        size: 8,
-        map: 'https://srmcgann.github.io/Coordinates/resources/stars/star0.png',
+        size: 20,
       }
       await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
         shapes.push(geometry)
