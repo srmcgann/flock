@@ -1,4 +1,6 @@
 <?
+$file = <<<FILE
+<?
   require_once('db.php');
   require_once('functions.php');
 
@@ -32,4 +34,7 @@
   } else {
     echo '[false]';
   }
+?>
+FILE;
+file_put_contents('../../flock/sync.php', $file);
 ?>
