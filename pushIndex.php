@@ -265,7 +265,7 @@ $file = <<<FILE
         if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           shapes.push(geometry)
         })  
-        
+
         Coordinates.LoadFPSControls(renderer, {
           flyMode: false,
           mSpeed: 5,
@@ -274,21 +274,18 @@ $file = <<<FILE
           crosshairSel: 3,
           crosshairSize: .25
         })
-        
+
         window.onkeydown = e => {
           if(e.keyCode == 70){
             renderer.flyMode = !renderer.flyMode
           }
         }
-        
+
         document.querySelectorAll('.overlay').forEach(e => e.style.display = 'none')
         loadingVideo.pause()
       }
-      
+
       window.Draw = () => {
-      
-        Coordinates.overlay.ctx.fillStyle = '#f00'
-        Coordinates.overlay.ctx.fillRect(100,100,100,100)
       
         gameSync()
         var t = renderer.t
@@ -326,6 +323,56 @@ $file = <<<FILE
                   shape.pitch = player.ipitch
                   shape.yaw = player.iyaw
                   renderer.Draw(shape)
+                  
+                  
+                  var pt = Coordinates.GetShaderCoord(0,0,0,
+                                                      shape, renderer)
+
+                  var rad = 50
+                  Coordinates.Overlay.ctx.strokeStyle = '#0f8'
+                  Coordinates.Overlay.ctx.beginPath()
+                  Coordinates.Overlay.ctx.arc(pt[0], pt[1],rad,0,7)
+                  Coordinates.Overlay.ctx.globalAlpha = .2
+                  Coordinates.Overlay.ctx.lineWidth = 10
+                  Coordinates.Overlay.ctx.stroke()
+                  Coordinates.Overlay.ctx.globalAlpha = .5
+                  Coordinates.Overlay.ctx.lineWidth = 2
+                  Coordinates.Overlay.ctx.stroke()
+                  
+                  var lx, ly
+                  Coordinates.Overlay.ctx.beginPath()
+                  if(pt[0] > Coordinates.Overlay.c.width/2){
+                    lx = -1
+                    Coordinates.Overlay.ctx.textAlign = 'right'
+                  }else{
+                    lx = 1
+                    Coordinates.Overlay.ctx.textAlign = 'left'
+                  }
+                  if(pt[1] > Coordinates.Overlay.c.height/2){
+                    ly = -1
+                  }else{
+                    ly = 1
+                  }
+                  var d = Math.hypot(lx, ly)
+                  Coordinates.Overlay.ctx.lineTo(pt[0]+lx/d*rad,
+                                                 pt[1]+ly/d*rad)
+                  Coordinates.Overlay.ctx.lineTo(pt[0]+lx/d*rad*3,
+                                                 pt[1]+ly/d*rad*2.2)
+                  Coordinates.Overlay.ctx.lineTo(pt[0]+lx/d*rad*10,
+                                                 pt[1]+ly/d*rad*2.2)
+
+                  Coordinates.Overlay.ctx.globalAlpha = .1
+                  Coordinates.Overlay.ctx.lineWidth = 8
+                  Coordinates.Overlay.ctx.stroke()
+                  Coordinates.Overlay.ctx.globalAlpha = .5
+                  Coordinates.Overlay.ctx.lineWidth = 2
+                  Coordinates.Overlay.ctx.stroke()
+                  
+                  Coordinates.Overlay.ctx.font = '32px monospace'
+                  Coordinates.Overlay.ctx.fillStyle = '#fff'
+                  lx = pt[0]+lx/d*rad*3
+                  ly = pt[1]+ly/d*rad*2.2
+                  Coordinates.Overlay.ctx.fillText(player.name,lx, ly)
                 }
               })
             break
@@ -430,7 +477,6 @@ $file = <<<FILE
           }
           iplayers = iplayers.filter(v=>v.keep)
         })
-        console.log(iplayers)
       }
       
       const launchLocalClient = data => {
@@ -486,7 +532,6 @@ $file = <<<FILE
     </script>
   </body>
 </html>
-
 
 
 FILE;
