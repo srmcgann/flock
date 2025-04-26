@@ -19,7 +19,7 @@
       // game guts
       
       import * as Coordinates from
-      "https://srmcgann.github.io/Coordinates/coordinates.min.js"
+      "https://srmcgann.github.io/Coordinates/coordinates.js"
       
       var S = Math.sin
       var C = Math.cos
