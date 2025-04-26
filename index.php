@@ -42,7 +42,7 @@
       const URLbase = 'https://boss.mindhackers.org/flock'
       
       const syncPlayers = data => {
-        players = data
+        players = JSON.parse(data)
       }
       
       const launchLocalClient = data => {
@@ -331,7 +331,6 @@
         shapes.forEach(shape => {
           switch(shape.name){
             case 'player graphic':
-            console.log(players)
             players.map(player => {
               shape.x = player.x
               shape.y = player.y
