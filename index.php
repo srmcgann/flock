@@ -49,7 +49,7 @@
         playerData = data
         setInterval(() => {
           coms('sync.php', 'syncPlayers')
-        }, 1e3)
+        }, 240)
       }
     
       var playerData = {
@@ -190,7 +190,7 @@
           playbackSpeed: 1,
           map: refTexture,
         }
-        if(0) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
+        if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           shapes.push(geometry)
           await backgroundShader.ConnectGeometry(geometry)
         }) 
@@ -310,12 +310,12 @@
       
       window.Draw = () => {
         
-        playerData.x = renderer.x
-        playerData.y = renderer.y
-        playerData.z = renderer.z
-        playerData.roll = renderer.roll
-        playerData.pitch = renderer.pitch
-        playerData.yaw = renderer.yaw
+        playerData.x = -renderer.x
+        playerData.y = -renderer.y
+        playerData.z = -renderer.z
+        playerData.roll = -renderer.roll
+        playerData.pitch = -renderer.pitch
+        playerData.yaw = -renderer.yaw
         
         var t = renderer.t
         if(!renderer.flyMode){
