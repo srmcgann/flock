@@ -286,6 +286,10 @@ $file = <<<FILE
       }
       
       window.Draw = () => {
+      
+        Coordinates.overlay.ctx.fillStyle = '#f00'
+        Coordinates.overlay.ctx.fillRect(100,100,100,100)
+      
         gameSync()
         var t = renderer.t
         if(!renderer.flyMode){
@@ -434,7 +438,7 @@ $file = <<<FILE
         playerData.id = +playerData.id
         setInterval(() => {
           coms('sync.php', 'syncPlayers')
-        }, 240)
+        }, 1e3)
       }
     
       var playerData = {

@@ -263,7 +263,7 @@
         if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           shapes.push(geometry)
         })  
-        
+
         Coordinates.LoadFPSControls(renderer, {
           flyMode: false,
           mSpeed: 5,
@@ -272,18 +272,19 @@
           crosshairSel: 3,
           crosshairSize: .25
         })
-        
+
         window.onkeydown = e => {
           if(e.keyCode == 70){
             renderer.flyMode = !renderer.flyMode
           }
         }
-        
+
         document.querySelectorAll('.overlay').forEach(e => e.style.display = 'none')
         loadingVideo.pause()
       }
-      
+
       window.Draw = () => {
+      
         gameSync()
         var t = renderer.t
         if(!renderer.flyMode){
@@ -320,6 +321,14 @@
                   shape.pitch = player.ipitch
                   shape.yaw = player.iyaw
                   renderer.Draw(shape)
+                  
+                  
+                  
+                  Coordinates.overlay.ctx.strokeStyle = '#0f8'
+                  Coordinates.overlay.ctx.beginPath()
+                  
+                  Coordinates.overlay.ctx.fillRect(100,100,100,100)
+                  
                 }
               })
             break
@@ -424,7 +433,6 @@
           }
           iplayers = iplayers.filter(v=>v.keep)
         })
-        console.log(iplayers)
       }
       
       const launchLocalClient = data => {
@@ -432,7 +440,7 @@
         playerData.id = +playerData.id
         setInterval(() => {
           coms('sync.php', 'syncPlayers')
-        }, 240)
+        }, 1e3)
       }
     
       var playerData = {
