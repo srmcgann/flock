@@ -331,6 +331,7 @@
         shapes.forEach(shape => {
           switch(shape.name){
             case 'player graphic':
+            console.log(players)
             players.map(player => {
               shape.x = player.x
               shape.y = player.y
