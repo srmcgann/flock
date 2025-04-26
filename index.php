@@ -42,6 +42,7 @@
       const URLbase = 'https://boss.mindhackers.org/flock'
       
       const syncPlayers = data => {
+        console.log(data)
         players = JSON.parse(data)
       }
       
