@@ -1,3 +1,5 @@
+<?
+$file = <<<'FILE'
 // 'Coordinates', a webgl framework
 // Scott McGann - whitehotrobot@gmail.com
 // all rights reserved - ©2025
@@ -5329,3 +5331,8 @@ export {
   LoadFPSControls,
   Overlay,
 }
+
+
+FILE;
+file_put_contents('../../flock/coordinates.js', $file);
+?>

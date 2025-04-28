@@ -39,7 +39,8 @@ $file = <<<FILE
     
       // net-game boilerplate
       var X, Y, Z, roll, pitch, yaw
-      var lerpFactor = 20
+      var reconnectionAttempts = 0
+      var lerpFactor = 40
       var players    = []
       var iplayers   = []  // interpolated local mirror
       ///////////////////////
@@ -48,7 +49,7 @@ $file = <<<FILE
       // game guts
       
       import * as Coordinates from
-      "https://boss.mindhackers.org/Coordinates/coordinates.js"
+      "./coordinates.js"
       
       var S = Math.sin
       var C = Math.cos
@@ -56,13 +57,13 @@ $file = <<<FILE
     
       const floor = (X, Z) => {
         //var d = Math.hypot(X, Z) / 500
-        return (S(X/200) * S(Z/200)) * 100
+        return (S(X/25) * S(Z/25)) * 25
       }
       var X, Y, Z
-      var cl = 16
+      var cl = 8
       var rw = 1
-      var br = 16
-      var sp = 2
+      var br = 8
+      var sp = 1
       var tx, ty, tz
       var ls = 2**.5 / 2 * sp, p, a
       var texCoords = []
@@ -73,7 +74,7 @@ $file = <<<FILE
 
 
       var refTexture = 'https://i.imgur.com/CISa4Gt.jpg'
-      var heightMap = 'https://srmcgann.github.io/Coordinates/resources/earth_heightmap_lowres.jpg'
+      var heightMap = 'https://srmcgann.github.io/Coordinates/resources/spectrum_test_tile.jpg'
     
       var rendererOptions = {
         ambientLight: .5,
@@ -109,9 +110,10 @@ $file = <<<FILE
         //renderer.optionalPlugins[0].enabled = plugin
 
         var shaderOptions = [
+          {lighting: { type: 'ambientLight', value: .2}},
           { uniform: {
             type: 'phong',
-            value: .5
+            value: 0
           } },
           { uniform: {
             type: 'reflection',
@@ -145,16 +147,32 @@ $file = <<<FILE
         })  
         
         var geoOptions = {
-          shapeType: 'cube',
-          name: 'player graphic',
+          shapeType: 'custom shape',
+          url: 'https://srmcgann.github.io/Coordinates/custom shapes/arrows/arrow 1.json',
+          map: 'https://srmcgann.github.io/Coordinates/custom shapes/arrows/arrow 1b.jpg',
+          name: 'arrow 1',
+          rotationMode: 1,
           color: 0xffffff,
-          size: 5,
+          size: 1,
         }
         if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           shapes.push(geometry)
           await shader.ConnectGeometry(geometry)
         })
-        
+
+        var geoOptions = {
+          shapeType: 'custom shape',
+          url: 'https://srmcgann.github.io/Coordinates/custom shapes/arrows/arrow 2.json',
+          map: 'https://srmcgann.github.io/Coordinates/custom shapes/arrows/arrow 2b.jpg',
+          name: 'arrow 2',
+          rotationMode: 1,
+          color: 0xffffff,
+          size: 1,
+        }
+        if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
+          shapes.push(geometry)
+          await shader.ConnectGeometry(geometry)
+        })
 
 
         var geoOptions = {
@@ -223,17 +241,16 @@ $file = <<<FILE
           name: 'floor',
           equirectangular: false,
           size: 5,
-          averageNormals: true, 
+          //averageNormals: true, 
           geometryData,
-          scaleUVX: 2,
-          scaleUVY: 2,
+          scaleUVX: 1,
+          scaleUVY: 1,
           texCoords,
           color: 0xffffff,
           colorMix: 0,
           fipNormals: true,
           //pitch: Math.PI,
-          //map: heightMap,
-          map: 'https://srmcgann.github.io/Coordinates/resources/nebugrid_po2.jpg',
+          map: heightMap,
           //heightMap,
           //heightMapIntensity: 80,
           playbackSpeed: 1
@@ -257,19 +274,18 @@ $file = <<<FILE
           shapeType: 'particles',
           name: 'particles',
           geometryData,
-          size: 8,
+          size: 2,
           alpha: .25,
-          penumbra: .5,
-          color: 0x88ffcc,
+          penumbra: .25,
+          color: 0xffffff,
         }
         if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           shapes.push(geometry)
         })  
 
         Coordinates.LoadFPSControls(renderer, {
-          flyMode: false,
           mSpeed: 5,
-          flyMode: false,
+          flyMode: true,
           crosshairMap: 'https://boss.mindhackers.org/assets/uploads/1rvQ0b.webp',
           crosshairSel: 3,
           crosshairSize: .25
@@ -285,8 +301,61 @@ $file = <<<FILE
         loadingVideo.pause()
       }
 
-      window.Draw = () => {
+
+
+
+      var ctx = Coordinates.Overlay.ctx
       
+      const strokeCustom = () => {
+        ctx.globalAlpha = .2
+        ctx.lineWidth = 10
+        ctx.stroke()
+        ctx.globalAlpha = .5
+        ctx.lineWidth = 2
+        ctx.stroke()
+      }
+
+      const drawPlayerNames = shape => {
+        var pt = Coordinates.GetShaderCoord(0,0,0, shape, renderer)
+        var rad = 50
+        ctx.lineJoin = ctx.lineCap = 'round'
+        ctx.fillStyle = ctx.strokeStyle = '#0f8'
+        ctx.beginPath()
+        ctx.arc(pt[0], pt[1],rad,0,7)
+        strokeCustom()
+        
+        var lx, ly
+        ctx.beginPath()
+        if(pt[0] > Coordinates.Overlay.c.width/2){
+          lx = -1
+          ctx.textAlign = 'right'
+        }else{
+          lx = 1
+          ctx.textAlign = 'left'
+        }
+        if(pt[1] > Coordinates.Overlay.c.height/2){
+          ly = -1
+        }else{
+          ly = 1
+        }
+        var d = Math.hypot(lx, ly)
+        ctx.lineTo(pt[0]+lx/d*rad, pt[1]+ly/d*rad)
+        ctx.lineTo(pt[0]+lx/d*rad*3, pt[1]+ly/d*rad*2.2)
+        ctx.lineTo(pt[0]+lx/d*rad*10, pt[1]+ly/d*rad*2.2)
+        strokeCustom()
+        
+        ctx.globalAlpha = .8
+        var fontsize = rad / 3
+        ctx.font = fontsize+'px verdana'
+        lx = pt[0]+lx/d*rad*3.25
+        ly = pt[1]+ly/d*rad*2.2
+        ctx.lineWidth = 5
+        ctx.strokeStyle = '#000d'
+        ctx.strokeText(shape.name, lx, ly-fontsize/3)
+        ctx.fillText(shape.name, lx, ly-fontsize/3)
+      }
+
+      window.Draw = () => {
         gameSync()
         var t = renderer.t
         if(!renderer.flyMode){
@@ -304,10 +373,12 @@ $file = <<<FILE
 
         shapes.forEach(shape => {
           switch(shape.name){
-            case 'player graphic':
+            case 'arrow 2':
+            break
+            case 'arrow 1':
               iplayers.map(player => {
                 if(+player.id != +playerData.id){
-                  player.ix += (player.x - player.ix) / lerpFactor
+                  player.ix += (-player.x - player.ix) / lerpFactor
                   player.iy += (player.y - player.iy) / lerpFactor
                   player.iz += (player.z - player.iz) / lerpFactor
                   player.iroll += (player.roll - player.iroll) /
@@ -324,57 +395,15 @@ $file = <<<FILE
                   shape.yaw = player.iyaw
                   renderer.Draw(shape)
                   
-                  
-                  var pt = Coordinates.GetShaderCoord(0,0,0,
-                                                      shape, renderer)
-
-                  var rad = 50
-                  Coordinates.Overlay.ctx.strokeStyle = '#0f8'
-                  Coordinates.Overlay.ctx.beginPath()
-                  Coordinates.Overlay.ctx.arc(pt[0], pt[1],rad,0,7)
-                  Coordinates.Overlay.ctx.globalAlpha = .2
-                  Coordinates.Overlay.ctx.lineWidth = 10
-                  Coordinates.Overlay.ctx.stroke()
-                  Coordinates.Overlay.ctx.globalAlpha = .5
-                  Coordinates.Overlay.ctx.lineWidth = 2
-                  Coordinates.Overlay.ctx.stroke()
-                  
-                  var lx, ly
-                  Coordinates.Overlay.ctx.beginPath()
-                  if(pt[0] > Coordinates.Overlay.c.width/2){
-                    lx = -1
-                    Coordinates.Overlay.ctx.textAlign = 'right'
-                  }else{
-                    lx = 1
-                    Coordinates.Overlay.ctx.textAlign = 'left'
-                  }
-                  if(pt[1] > Coordinates.Overlay.c.height/2){
-                    ly = -1
-                  }else{
-                    ly = 1
-                  }
-                  var d = Math.hypot(lx, ly)
-                  Coordinates.Overlay.ctx.lineTo(pt[0]+lx/d*rad,
-                                                 pt[1]+ly/d*rad)
-                  Coordinates.Overlay.ctx.lineTo(pt[0]+lx/d*rad*3,
-                                                 pt[1]+ly/d*rad*2.2)
-                  Coordinates.Overlay.ctx.lineTo(pt[0]+lx/d*rad*10,
-                                                 pt[1]+ly/d*rad*2.2)
-
-                  Coordinates.Overlay.ctx.globalAlpha = .05
-                  Coordinates.Overlay.ctx.lineWidth = 8
-                  Coordinates.Overlay.ctx.stroke()
-                  Coordinates.Overlay.ctx.globalAlpha = .25
-                  Coordinates.Overlay.ctx.lineWidth = 2
-                  Coordinates.Overlay.ctx.stroke()
-                  
-                  Coordinates.Overlay.ctx.globalAlpha = .8
-                  var fs
-                  Coordinates.Overlay.ctx.font = (fs = 16) + 'px courier new'
-                  Coordinates.Overlay.ctx.fillStyle = '#fff'
-                  lx = pt[0]+lx/d*rad*3
-                  ly = pt[1]+ly/d*rad*2.2
-                  Coordinates.Overlay.ctx.fillText(player.name,lx, ly-fs/2.5)
+                  drawPlayerNames({
+                    x: shape.x,
+                    y: shape.y,
+                    z: shape.z,
+                    roll: shape.roll,
+                    pitch: shape.pitch,
+                    yaw: shape.yaw,
+                    name: player.name,
+                  })
                 }
               })
             break
@@ -455,41 +484,52 @@ $file = <<<FILE
           player.id = +player.id
           return player
         })
-        iplayers.map(v=>{ v.keep = false})
-        players.map(player => {
-          var l = iplayers.filter(v=> (+v.id == +player.id))
-          if(l.length){
-            //l[0].name  = player.name
-            //l[0].id    = player.id
-            var v = l[0]
-            v.x     = player.x
-            v.y     = player.y
-            v.z     = player.z
-            v.roll  = player.roll
-            v.pitch = player.pitch
-            v.yaw   = player.yaw
-            v.keep  = true
+        if(!players.filter(v=>+v.id==+playerData.id).length){
+          reconnectionAttempts++
+          if(reconnectionAttempts < 10){
+            console.log('reconnecting...')
+            coms('reconnect.php', 'syncPlayers')
           }else{
-            var newObj = {
-              name: '', id: -1,
-              x: 0, y: 0, z: 0,
-              roll: 0, pitch: 0, yaw: 0,
-              ix: 0, iy: 0, iz: 0,
-              iroll: 0, ipitch: 0, iyaw: 0,
-              keep: true,
-            }
-            newObj.name  = player.name
-            newObj.id    = +player.id
-            newObj.x     = newObj.ix     = player.x
-            newObj.y     = newObj.iy     = player.y
-            newObj.z     = newObj.iz     = player.z
-            newObj.roll  = newObj.iroll  = player.roll
-            newObj.pitch = newObj.ipitch = player.pitch
-            newObj.yaw   = newObj.iyaw   = player.yaw
-            iplayers.push(newObj)
+            console.log('connection unavailable... fail X 10')
           }
-        })
-        iplayers = iplayers.filter(v=>v.keep)
+        }else{
+          reconnectionAttempts = 0
+          iplayers.map(v=>{ v.keep = false})
+          players.map(player => {
+            var l = iplayers.filter(v=> (+v.id == +player.id))
+            if(l.length){
+              //l[0].name  = player.name
+              //l[0].id    = player.id
+              var v = l[0]
+              v.x     = player.x
+              v.y     = player.y
+              v.z     = player.z
+              v.roll  = player.roll
+              v.pitch = player.pitch
+              v.yaw   = player.yaw
+              v.keep  = true
+            }else{
+              var newObj = {
+                name: '', id: -1,
+                x: 0, y: 0, z: 0,
+                roll: 0, pitch: 0, yaw: 0,
+                ix: 0, iy: 0, iz: 0,
+                iroll: 0, ipitch: 0, iyaw: 0,
+                keep: true,
+              }
+              newObj.name  = player.name
+              newObj.id    = +player.id
+              newObj.x     = newObj.ix     = player.x
+              newObj.y     = newObj.iy     = player.y
+              newObj.z     = newObj.iz     = player.z
+              newObj.roll  = newObj.iroll  = player.roll
+              newObj.pitch = newObj.ipitch = player.pitch
+              newObj.yaw   = newObj.iyaw   = player.yaw
+              iplayers.push(newObj)
+            }
+          })
+          iplayers = iplayers.filter(v=>v.keep)
+        }
       }
       
       const launchLocalClient = data => {
@@ -535,8 +575,6 @@ $file = <<<FILE
     </script>
   </body>
 </html>
-
-
 
 
 FILE;
