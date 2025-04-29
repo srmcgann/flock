@@ -24,9 +24,44 @@ $file = <<<FILE
         width: 100vw;
         height: 100vh;
       }
+      #playerName:focus{
+        outline: none;
+      }
+      #playerName{
+        background: #024;
+        color: #8fc;
+        width: 300px;
+        border: 1px solid #3333;
+        font-size: 16px;
+        font-family: verdana;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+      .inputLabel{
+        cursor: pointer;
+        font-family: verdana;
+        z-index: 100;
+        font-size: 16px;
+        position: fixed;
+        top: 5px;
+        left: 5px;
+        opacity: .75;
+        color: #fff;
+      }
     </style>
   </head>
   <body>
+    <label for="playerName" class="inputLabel">
+      name 
+      <input
+        type="text"
+        placeholder="enter a name"
+        id="playerName"
+        oninput="updatePlayerName(event)"
+        onmousedown="nullInput()"
+        onclick="nullInput()"
+      />
+    </label>
     <div class="overlay">
       <video
         id="loadingVideo"
@@ -49,7 +84,7 @@ $file = <<<FILE
       // game guts
       
       import * as Coordinates from
-      "./coordinates.js"
+      "https://srmcgann.github.io/Coordinates/coordinates.min.js"
       
       var S = Math.sin
       var C = Math.cos
@@ -57,13 +92,13 @@ $file = <<<FILE
     
       const floor = (X, Z) => {
         //var d = Math.hypot(X, Z) / 500
-        return (S(X/25) * S(Z/25)) * 25
+        return (S(X/100) * S(Z/100)) * 20
       }
       var X, Y, Z
-      var cl = 8
+      var cl = 12
       var rw = 1
-      var br = 8
-      var sp = 1
+      var br = 12
+      var sp = 3
       var tx, ty, tz
       var ls = 2**.5 / 2 * sp, p, a
       var texCoords = []
@@ -74,7 +109,7 @@ $file = <<<FILE
 
 
       var refTexture = 'https://i.imgur.com/CISa4Gt.jpg'
-      var heightMap = 'https://srmcgann.github.io/Coordinates/resources/spectrum_test_tile.jpg'
+      var heightMap = 'https://srmcgann.github.io/Coordinates/resources/rd5_po2_small.mp4'
     
       var rendererOptions = {
         ambientLight: .5,
@@ -97,9 +132,7 @@ $file = <<<FILE
         }
       }
 
-
       var shapes = []
-      
 
       var launch = async (width, height) => {
         var ar = width / height
@@ -251,8 +284,8 @@ $file = <<<FILE
           fipNormals: true,
           //pitch: Math.PI,
           map: heightMap,
-          //heightMap,
-          //heightMapIntensity: 80,
+          heightMap,
+          heightMapIntensity: 50,
           playbackSpeed: 1
         }
         if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
@@ -274,8 +307,8 @@ $file = <<<FILE
           shapeType: 'particles',
           name: 'particles',
           geometryData,
-          size: 2,
-          alpha: .25,
+          size: 5,
+          alpha: .3,
           penumbra: .25,
           color: 0xffffff,
         }
@@ -285,7 +318,7 @@ $file = <<<FILE
 
         Coordinates.LoadFPSControls(renderer, {
           mSpeed: 5,
-          flyMode: true,
+          flyMode: false,
           crosshairMap: 'https://boss.mindhackers.org/assets/uploads/1rvQ0b.webp',
           crosshairSel: 3,
           crosshairSize: .25
@@ -319,7 +352,7 @@ $file = <<<FILE
         var pt = Coordinates.GetShaderCoord(0,0,0, shape, renderer)
         var rad = 50
         ctx.lineJoin = ctx.lineCap = 'round'
-        ctx.fillStyle = ctx.strokeStyle = '#0f8'
+        ctx.strokeStyle = '#0f8'
         ctx.beginPath()
         ctx.arc(pt[0], pt[1],rad,0,7)
         strokeCustom()
@@ -350,6 +383,7 @@ $file = <<<FILE
         lx = pt[0]+lx/d*rad*3.25
         ly = pt[1]+ly/d*rad*2.2
         ctx.lineWidth = 5
+        ctx.fillStyle = '#8ff'
         ctx.strokeStyle = '#000d'
         ctx.strokeText(shape.name, lx, ly-fontsize/3)
         ctx.fillText(shape.name, lx, ly-fontsize/3)
@@ -501,6 +535,7 @@ $file = <<<FILE
               //l[0].name  = player.name
               //l[0].id    = player.id
               var v = l[0]
+              v.name  = player.name
               v.x     = player.x
               v.y     = player.y
               v.z     = player.z
@@ -532,9 +567,14 @@ $file = <<<FILE
         }
       }
       
+      window.updatePlayerName = e => {
+        playerData.name = playerName.value
+      }
+      
       const launchLocalClient = data => {
         playerData = data
         playerData.id = +playerData.id
+        playerName.value = playerData.name
         setInterval(() => {
           coms('sync.php', 'syncPlayers')
         }, 1e3)
@@ -561,6 +601,11 @@ $file = <<<FILE
         })
       }
       
+      window.nullInput = e => {
+        e.preventDefault()
+        e.stopPropagation()
+      }
+      
       const gameSync = () => {
         playerData.x = renderer.x
         playerData.y = -renderer.y
@@ -575,6 +620,8 @@ $file = <<<FILE
     </script>
   </body>
 </html>
+
+
 
 
 FILE;
