@@ -110,8 +110,10 @@ const Renderer = async options => {
   
   const c    = document.createElement('canvas')
   const ctx  = c.getContext(context.mode, context.options)
-  c.width  = width
-  c.height = height
+  c.width    = width
+  c.height   = height
+  c.tabIndex = 0
+  c.style.outline = 'none'
   const contextType = context.mode
 
   if(context.mode != '2d') console.log(`GLSL version: ${ctx.getParameter(ctx.SHADING_LANGUAGE_VERSION)}`)
@@ -4859,12 +4861,16 @@ const LoadFPSControls = async (renderer, options) => {
     renderer.keyTimerInterval = .2
     
     window.addEventListener('keydown', e => {
-      renderer.keys[e.keyCode] = true
-      renderer.lastInteraction = renderer.t
+      if(document.activeElement.nodeName == 'CANVAS'){
+        renderer.keys[e.keyCode] = true
+        renderer.lastInteraction = renderer.t
+      }
     })
     window.addEventListener('keyup', e => {
-      renderer.keys[e.keyCode] = false
-      renderer.lastInteraction = renderer.t
+      if(document.activeElement.nodeName == 'CANVAS'){
+        renderer.keys[e.keyCode] = false
+        renderer.lastInteraction = renderer.t
+      }
     })
     window.addEventListener('mousedown', e => {
       renderer.lastInteraction = renderer.t
@@ -4873,7 +4879,7 @@ const LoadFPSControls = async (renderer, options) => {
         //jump()
         //renderer.c.requestFullscreen()
         var el = document.querySelectorAll('.genericPopup')
-        if(!el.length) renderer.c.requestPointerLock({unadjustedMovement: true})
+        if(!el.length && document.activeElement.nodeName == 'CANVAS') renderer.c.requestPointerLock({unadjustedMovement: true})
       }
     })
     window.addEventListener('mouseup', e => {
@@ -4909,13 +4915,13 @@ const LoadFPSControls = async (renderer, options) => {
       renderer.x += pvx
       renderer.y += pvy
       renderer.z += pvz
-      if(renderer.hasTraction || renderer.flyMode){
+      if(document.activeElement.nodeName == 'CANVAS' && (renderer.hasTraction || renderer.flyMode)){
         pvx /= pdrag
         pvy /= pdrag
         pvz /= pdrag
       }
       
-      if(renderer.flyMode){
+      if(renderer.flyMode && document.activeElement.nodeName == 'CANVAS'){
         var p1 = -renderer.yaw + Math.PI
         var p2 = renderer.pitch
         switch(renderer.mouseButton){
@@ -4935,7 +4941,8 @@ const LoadFPSControls = async (renderer, options) => {
       }
       
       accel = 1
-      if(renderer.hasTraction || renderer.flyMode) renderer.keys.map((v, i) => {
+      if(document.activeElement.nodeName == 'CANVAS' &&
+        (renderer.hasTraction || renderer.flyMode)) renderer.keys.map((v, i) => {
         if(renderer.keys[i]){
           switch(i){
             case 16:  // shift
@@ -5282,7 +5289,7 @@ const getParams = ctx => {
 var Overlay        // for sketch-up, e.g. shape-bounding graphics
 Overlay = await Renderer({ context: { mode: '2d', margin: 0 } })
 Overlay.c.style.background = '#0000'
-Overlay.c.style.zIndex = 10000
+Overlay.c.style.zIndex = 10
 
 var scratchHeightMap = document.createElement('canvas')
 var SHMctx = scratchHeightMap.getContext('2d', {willReadFrequently: true})

@@ -56,8 +56,7 @@
         placeholder="enter a name"
         id="playerName"
         oninput="updatePlayerName(event)"
-        onmousedown="nullInput()"
-        onclick="nullInput()"
+        onmousedown="selectMaybe(this)"
       />
     </label>
     <div class="overlay">
@@ -73,7 +72,7 @@
       // net-game boilerplate
       var X, Y, Z, roll, pitch, yaw
       var reconnectionAttempts = 0
-      var lerpFactor = 40
+      var lerpFactor = 20
       var players    = []
       var iplayers   = []  // interpolated local mirror
       ///////////////////////
@@ -82,7 +81,7 @@
       // game guts
       
       import * as Coordinates from
-      "https://srmcgann.github.io/Coordinates/coordinates.min.js"
+      "./coordinates.js"
       
       var S = Math.sin
       var C = Math.cos
@@ -96,7 +95,7 @@
       var cl = 12
       var rw = 1
       var br = 12
-      var sp = 3
+      var sp = 2
       var tx, ty, tz
       var ls = 2**.5 / 2 * sp, p, a
       var texCoords = []
@@ -104,17 +103,18 @@
       var minZ = 6e6, maxZ = -6e6
       var mag = 12.5 //20 * (2**.5/2)
       var ax, ay, az, nax, nay, naz
+      var gunShape, missileShape
 
 
-      var refTexture = 'https://i.imgur.com/CISa4Gt.jpg'
-      var heightMap = 'https://srmcgann.github.io/Coordinates/resources/rd5_po2_small.mp4'
+      var refTexture = 'https://srmcgann.github.io/Coordinates/resources/rd4_po2_small.mp4'
+      var heightMap = 'https://srmcgann.github.io/Coordinates/resources/rd4_po2_small.mp4'
     
       var rendererOptions = {
-        ambientLight: .5,
+        ambientLight: 0,
         width: 960,
         height: 540,
         margin: 0,
-        fov: 600
+        fov: 800
       }
       var renderer = await Coordinates.Renderer(rendererOptions)
       
@@ -125,7 +125,8 @@
       var grav = .666 / 4
       var playervy = 0
       renderer.c.onmousedown = e => {
-        if(!renderer.flyMode && renderer.hasTraction && e.button == 2){
+        if(document.activeElement.nodeName == 'CANVAS' && (renderer.flyMode || (!renderer.flyMode &&
+           renderer.hasTraction)) && e.button == 2){
           playervy -= 10
         }
       }
@@ -141,7 +142,32 @@
         //renderer.optionalPlugins[0].enabled = plugin
 
         var shaderOptions = [
-          {lighting: { type: 'ambientLight', value: .2}},
+          {lighting: { type: 'ambientLight', value: 0}},
+          { uniform: {
+            type: 'phong',
+            value: .35
+          } },
+          { uniform: {
+            type: 'reflection',
+            playbackSpeed: 2,
+            enabled: true,
+            map: refTexture,
+            value: .1
+          } },
+        ]
+        var shader = await Coordinates.BasicShader(renderer, shaderOptions)
+
+        var shaderOptions = [
+          {lighting: { type: 'ambientLight', value: .4}},
+          { uniform: {
+            type: 'phong',
+            value: 0
+          } },
+        ]
+        var missileShader = await Coordinates.BasicShader(renderer, shaderOptions)
+
+        var shaderOptions = [
+          {lighting: { type: 'ambientLight', value: -.5}},
           { uniform: {
             type: 'phong',
             value: 0
@@ -150,13 +176,13 @@
             type: 'reflection',
             enabled: false,
             map: refTexture,
-            value: .5
+            value: .25
           } },
         ]
-        var shader = await Coordinates.BasicShader(renderer, shaderOptions)
+        var floorShader = await Coordinates.BasicShader(renderer, shaderOptions)
 
         var shaderOptions = [
-          { lighting: {type: 'ambientLight', value: -.15},
+          { lighting: {type: 'ambientLight', value: .1},
           },
           { uniform: {
             type: 'phong',
@@ -179,6 +205,50 @@
         
         var geoOptions = {
           shapeType: 'custom shape',
+          url: 'https://srmcgann.github.io/Coordinates/custom shapes/bird ship/birdship.json',
+          map: 'https://srmcgann.github.io/Coordinates/custom shapes/bird ship/birdship.jpg',
+          name: 'bird ship',
+          size: 1,
+          rotationMode: 1,
+          color: 0xffffff,
+          colorMix: 0,
+        }
+        if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
+          shapes.push(geometry)
+          await shader.ConnectGeometry(geometry)
+        })
+
+        var geoOptions = {
+          shapeType: 'custom shape',
+          url: 'https://srmcgann.github.io/Coordinates/custom shapes/bird ship/guns.json',
+          map: 'https://srmcgann.github.io/Coordinates/custom shapes/bird ship/birdship.jpg',
+          name: 'gun shape',
+          size: 1,
+          rotationMode: 1,
+          color: 0xffffff,
+          colorMix: 0,
+        }
+        if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
+          gunShape = geometry
+          await shader.ConnectGeometry(geometry)
+        })
+
+        var geoOptions = {
+          shapeType: 'custom shape',
+          url: 'https://srmcgann.github.io/Coordinates/custom shapes/bird ship/missile.json',
+          map: 'https://srmcgann.github.io/Coordinates/custom shapes/bird ship/birdship.jpg',
+          name: 'missile',
+          rotationMode: 1,
+          color: 0xffffff,
+          size: 1,
+        }
+        if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
+          missileShape = geometry
+          await missileShader.ConnectGeometry(geometry)
+        })
+
+        var geoOptions = {
+          shapeType: 'custom shape',
           url: 'https://srmcgann.github.io/Coordinates/custom shapes/arrows/arrow 1.json',
           map: 'https://srmcgann.github.io/Coordinates/custom shapes/arrows/arrow 1b.jpg',
           name: 'arrow 1',
@@ -186,7 +256,7 @@
           color: 0xffffff,
           size: 1,
         }
-        if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
+        if(0) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           shapes.push(geometry)
           await shader.ConnectGeometry(geometry)
         })
@@ -200,38 +270,22 @@
           color: 0xffffff,
           size: 1,
         }
-        if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
+        if(0) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           shapes.push(geometry)
           await shader.ConnectGeometry(geometry)
         })
 
 
         var geoOptions = {
-          shapeType: 'point light',
-          name: 'point light',
-          showSource: true,
-          size: 20,
-          lum: 120,
-          color: 0xffffff,
-        }
-        if(0) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
-          shapes.push(geometry)
-        })
-
-        var geoOptions = {
-          shapeType: 'cylinder',
+          shapeType: 'dodecahedron',
           name: 'background',
-          subs: 0,
-          scaleUVX: 1,
-          scaleUVY: 1,
-          //scaleY: .75,
-          pitch: 0,
-          size: 450,
+          subs: 2,
+          size: 1e4,
           colorMix: 0,
           playbackSpeed: 1,
           map: refTexture,
         }
-        if(0) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
+        if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           shapes.push(geometry)
           await backgroundShader.ConnectGeometry(geometry)
         }) 
@@ -289,7 +343,7 @@
         if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           Coordinates.SyncNormals(geometry, true, true)
           shapes.push(geometry)
-          await shader.ConnectGeometry(geometry)
+          await floorShader.ConnectGeometry(geometry)
         })
 
         var iPc = 1e3
@@ -301,6 +355,19 @@
           return [X, Y, Z]
         })
         
+        var geoOptions = {
+          shapeType: 'point light',
+          name: 'point light',
+          showSource: true,
+          map: 'https://srmcgann.github.io/Coordinates/resources/stars/star0.png',
+          size: 30,
+          lum: 140,
+          color: 0xffffff,
+        }
+        if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
+          shapes.push(geometry)
+        })  
+
         var geoOptions = {
           shapeType: 'particles',
           name: 'particles',
@@ -316,7 +383,7 @@
 
         Coordinates.LoadFPSControls(renderer, {
           mSpeed: 5,
-          flyMode: false,
+          flyMode: true,
           crosshairMap: 'https://boss.mindhackers.org/assets/uploads/1rvQ0b.webp',
           crosshairSel: 3,
           crosshairSize: .25
@@ -337,23 +404,25 @@
 
       var ctx = Coordinates.Overlay.ctx
       
-      const strokeCustom = () => {
-        ctx.globalAlpha = .2
-        ctx.lineWidth = 10
+      const strokeCustom = (fill = false) => {
+        ctx.globalAlpha = .1
+        ctx.lineWidth = 6
         ctx.stroke()
-        ctx.globalAlpha = .5
-        ctx.lineWidth = 2
+        ctx.globalAlpha = .3
+        ctx.lineWidth = 1
         ctx.stroke()
+        if(fill) ctx.fill()
       }
 
       const drawPlayerNames = shape => {
         var pt = Coordinates.GetShaderCoord(0,0,0, shape, renderer)
         var rad = 50
         ctx.lineJoin = ctx.lineCap = 'round'
-        ctx.strokeStyle = '#0f8'
+        ctx.strokeStyle = '#f00'
+        ctx.fillStyle = '#f022'
         ctx.beginPath()
         ctx.arc(pt[0], pt[1],rad,0,7)
-        strokeCustom()
+        strokeCustom(true)
         
         var lx, ly
         ctx.beginPath()
@@ -372,7 +441,7 @@
         var d = Math.hypot(lx, ly)
         ctx.lineTo(pt[0]+lx/d*rad, pt[1]+ly/d*rad)
         ctx.lineTo(pt[0]+lx/d*rad*3, pt[1]+ly/d*rad*2.2)
-        ctx.lineTo(pt[0]+lx/d*rad*10, pt[1]+ly/d*rad*2.2)
+        ctx.lineTo(pt[0]+lx/d*rad*6, pt[1]+ly/d*rad*2.2)
         strokeCustom()
         
         ctx.globalAlpha = .8
@@ -380,20 +449,51 @@
         ctx.font = fontsize+'px verdana'
         lx = pt[0]+lx/d*rad*3.25
         ly = pt[1]+ly/d*rad*2.2
-        ctx.lineWidth = 5
-        ctx.fillStyle = '#8ff'
+        ctx.lineWidth = 6
+        ctx.globalAlpha = 1
+        ctx.fillStyle = '#6fc'
         ctx.strokeStyle = '#000d'
         ctx.strokeText(shape.name, lx, ly-fontsize/3)
         ctx.fillText(shape.name, lx, ly-fontsize/3)
       }
+      
+      
+      var missiles = []
+      var missileSpeed = 25
+      var alt = false
+      const shoot = player => {
+        var p1 = player.yaw + Math.PI
+        var p2 = -player.pitch + Math.PI / 2
+        var vx = -S(p1) * S(p2) * missileSpeed
+        var vy = C(p2) * missileSpeed
+        var vz = -C(p1) * S(p2) * missileSpeed
+        alt = !alt
+        var offset = Coordinates.R_pyr(35 * (alt ? -1: 1), 0, 0, player)
+        
+        missiles = [...missiles, {
+          x: -player.x + offset[0],
+          y: player.y + offset[1],
+          z: -player.z + offset[2],
+          roll: player.roll,
+          pitch: player.pitch,
+          yaw: player.yaw,
+          vx, vy, vz,
+          t: renderer.t,
+        }]
+      }
 
       window.Draw = () => {
-        gameSync()
         var t = renderer.t
-        if(!renderer.flyMode){
+        gameSync()
+        var fl = -floor(-renderer.x, -renderer.z) - 50
+        if(renderer.flyMode){
+          if(renderer.y >= fl){
+            renderer.y = fl
+            playervy = 0
+          }
+        }else{
           playervy += grav
           renderer.y += playervy
-          var fl = -floor(-renderer.x, -renderer.z) - 50
           if(renderer.y > fl - 3){
             renderer.y = fl
             playervy = 0
@@ -402,14 +502,32 @@
             renderer.hasTraction = false
           }
         }
+        
+        if(typeof missileShape != 'undefined'){
+          missiles = missiles.filter(missile => renderer.t - missile.t < 3)
+          missiles.map(missile => {
+            missileShape.x = missile.x += missile.vx
+            missileShape.y = missile.y += missile.vy
+            missileShape.z = missile.z += missile.vz
+            missileShape.roll = missile.roll
+            missileShape.pitch = missile.pitch
+            missileShape.yaw = missile.yaw
+            renderer.Draw(missileShape)
+          })
+        }
+
 
         shapes.forEach(shape => {
           switch(shape.name){
+            case 'arrow 1':
             case 'arrow 2':
             break
-            case 'arrow 1':
+            case 'bird ship':
               iplayers.map(player => {
                 if(+player.id != +playerData.id){
+                  
+                  if(!((t*60|0)%20)) shoot(player)
+                    
                   player.ix += (-player.x - player.ix) / lerpFactor
                   player.iy += (player.y - player.iy) / lerpFactor
                   player.iz += (player.z - player.iz) / lerpFactor
@@ -425,8 +543,18 @@
                   shape.roll = player.iroll
                   shape.pitch = player.ipitch
                   shape.yaw = player.iyaw
-                  renderer.Draw(shape)
                   
+                  if(typeof gunShape != 'undefined'){
+                    gunShape.x = shape.x
+                    gunShape.y = shape.y
+                    gunShape.z = shape.z
+                    gunShape.roll = shape.roll
+                    gunShape.pitch = shape.pitch
+                    gunShape.yaw = shape.yaw
+                    renderer.Draw(gunShape)
+                  }
+                  renderer.Draw(shape)
+
                   drawPlayerNames({
                     x: shape.x,
                     y: shape.y,
@@ -436,6 +564,7 @@
                     yaw: shape.yaw,
                     name: player.name,
                   })
+                  
                 }
               })
             break
@@ -498,9 +627,6 @@
               renderer.Draw(shape)
             break
             default:
-              shape.yaw += .01
-              shape.pitch += .005
-              renderer.Draw(shape)
             break
           }
         })
@@ -566,24 +692,41 @@
       }
       
       window.updatePlayerName = e => {
+        if(!playerName.value) return
+        playerName.value = playerName.value.substr(0, 20)
+        var params = location.href.split('?')
+        if(params.length > 1){
+          params = params[1].split('&').filter(v=>{
+            return v.toLowerCase().indexOf('name=') == -1
+          }).join('&')
+          params = '?name=' + playerName.value + (params ? '&' : '') + params
+        }else{
+          params = '?name=' + playerName.value
+        }
+        var newURL = location.href.split('?')[0] + params
         playerData.name = playerName.value
+        history.replaceState({}, document.title, newURL)
       }
       
       const launchLocalClient = data => {
         playerData = data
         playerData.id = +playerData.id
-        playerName.value = playerData.name
+        
+        var pn = location.href.split('name=')
+        if(pn.length>1){
+          pn = pn[1].split('&')[0]
+          playerData.name = playerName.value = decodeURIComponent(pn)
+        } else {
+          playerName.value = playerData.name
+          updatePlayerName()
+        }
+        
+        
         setInterval(() => {
           coms('sync.php', 'syncPlayers')
         }, 1e3)
       }
     
-      var playerData = {
-        name: '', id: -1,
-        x: 0, y: 0, z: 0,
-        roll: 0, pitch: 0, yaw: 0,
-      }
-      
       const coms = (target, callback='') => {
         let sendData = { playerData }
         var url = URLbase + '/' + target
@@ -594,14 +737,8 @@
           },
           body: JSON.stringify(sendData),
         }).then(res => res.json()).then(data => {
-          //output.innerHTML = JSON.stringify(playerData)
           if(callback) eval(callback + '(data)')
         })
-      }
-      
-      window.nullInput = e => {
-        e.preventDefault()
-        e.stopPropagation()
       }
       
       const gameSync = () => {
@@ -611,6 +748,26 @@
         playerData.roll = -renderer.roll
         playerData.pitch = -renderer.pitch
         playerData.yaw = -renderer.yaw
+      }
+
+      window.selectMaybe = e => {
+        if(document.activeElement.id != 'playerName') {
+          setTimeout(()=>{e.select()},0)
+        }
+      }
+      
+      renderer.x     = (Rn() - .5) * 200
+      renderer.z     = (Rn() - .5) * 200
+      renderer.y     = -floor(renderer.x, renderer.z) - 20
+      renderer.yaw   = (Rn() - .5) * Math.PI*2
+      renderer.pitch = (Rn() - .5) * Math.PI/3
+
+      var playerData = {
+        name: '', id: -1,
+        x: renderer.x,
+        y: renderer.y,
+        z: renderer.z,
+        roll: 0, pitch: 0, yaw: 0,
       }
       
       coms('launch.php', 'launchLocalClient')

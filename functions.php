@@ -72,8 +72,7 @@
   
   function endSession($slug){
     global $link;
-    $sid = alphaToDec($slug);
-    $sql = "DELETE FROM sessions WHERE id = $sid";
+    $sql = "DELETE FROM sessions WHERE slug LIKE BINARY \"$slug\"";
     mysqli_query($link, $sql);
   }
   
