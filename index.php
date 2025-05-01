@@ -103,14 +103,15 @@
       var minZ = 6e6, maxZ = -6e6
       var mag = 12.5 //20 * (2**.5/2)
       var ax, ay, az, nax, nay, naz
-      var gunShape, missileShape
+      var gunShape, missileShape, muzzleFlair
+      var muzzleFlairBase, thrusterShape, splosionShape
 
 
-      var refTexture = 'https://srmcgann.github.io/Coordinates/resources/rd4_po2_small.mp4'
-      var heightMap = 'https://srmcgann.github.io/Coordinates/resources/rd4_po2_small.mp4'
+      var refTexture = 'https://srmcgann.github.io/Coordinates/resources/nebugrid_po2.jpg'
+      var heightMap = 'https://srmcgann.github.io/Coordinates/resources/nebugrid_po2.jpg'
     
       var rendererOptions = {
-        ambientLight: 0,
+        ambientLight: .2,
         width: 960,
         height: 540,
         margin: 0,
@@ -125,13 +126,17 @@
       var grav = .666 / 4
       var playervy = 0
       renderer.c.onmousedown = e => {
-        if(document.activeElement.nodeName == 'CANVAS' && (renderer.flyMode || (!renderer.flyMode &&
-           renderer.hasTraction)) && e.button == 2){
+        if(document.activeElement.nodeName == 'CANVAS' && (!renderer.flyMode &&
+           renderer.hasTraction) && e.button == 2){
           playervy -= 10
         }
       }
 
-      var shapes = []
+      var shapes       = []
+      var missiles     = []
+      var flashes      = []
+      var splosions    = []
+      var baseSplosion = []
 
       var launch = async (width, height) => {
         var ar = width / height
@@ -142,7 +147,7 @@
         //renderer.optionalPlugins[0].enabled = plugin
 
         var shaderOptions = [
-          {lighting: { type: 'ambientLight', value: 0}},
+          {lighting: { type: 'ambientLight', value: .2}},
           { uniform: {
             type: 'phong',
             value: .35
@@ -161,13 +166,18 @@
           {lighting: { type: 'ambientLight', value: .4}},
           { uniform: {
             type: 'phong',
-            value: 0
+            value: .2
+          } },
+          { uniform: {
+            type: 'reflection',
+            map: refTexture,
+            value: .2,
           } },
         ]
         var missileShader = await Coordinates.BasicShader(renderer, shaderOptions)
 
         var shaderOptions = [
-          {lighting: { type: 'ambientLight', value: -.5}},
+          {lighting: { type: 'ambientLight', value: .2}},
           { uniform: {
             type: 'phong',
             value: 0
@@ -182,7 +192,7 @@
         var floorShader = await Coordinates.BasicShader(renderer, shaderOptions)
 
         var shaderOptions = [
-          { lighting: {type: 'ambientLight', value: .1},
+          { lighting: {type: 'ambientLight', value: .2},
           },
           { uniform: {
             type: 'phong',
@@ -192,17 +202,6 @@
         var backgroundShader = await Coordinates.BasicShader(renderer, shaderOptions)
 
 
-        var geoOptions = {
-          shapeType: 'sprite',
-          name: 'player graphic',
-          color: 0xffffff,
-          map: 'https://srmcgann.github.io/Coordinates/resources/stars/star0.png',
-          size: 20,
-        }
-        if(0) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
-          shapes.push(geometry)
-        })  
-        
         var geoOptions = {
           shapeType: 'custom shape',
           url: 'https://srmcgann.github.io/Coordinates/custom shapes/bird ship/birdship.json',
@@ -217,6 +216,33 @@
           shapes.push(geometry)
           await shader.ConnectGeometry(geometry)
         })
+
+        var geoOptions = {
+          shapeType: 'sprite',
+          map: 'https://srmcgann.github.io/Coordinates/resources/stars/star5.png',
+          name: 'muzzle flair',
+          size: 1,
+          rotationMode: 1,
+        }
+        if(1){
+          await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
+            muzzleFlair = geometry
+          })
+          await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
+            muzzleFlairBase = geometry
+          })
+        }
+        var geoOptions = {
+          shapeType: 'sprite',
+          map: 'https://srmcgann.github.io/Coordinates/resources/stars/star1.png',
+          name: 'thruster',
+          size: 5,
+        }
+        if(1){
+          await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
+            thrusterShape = geometry
+          })
+        }
 
         var geoOptions = {
           shapeType: 'custom shape',
@@ -285,7 +311,7 @@
           playbackSpeed: 1,
           map: refTexture,
         }
-        if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
+        if(0) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           shapes.push(geometry)
           await backgroundShader.ConnectGeometry(geometry)
         }) 
@@ -336,8 +362,8 @@
           fipNormals: true,
           //pitch: Math.PI,
           map: heightMap,
-          heightMap,
-          heightMapIntensity: 50,
+          //heightMap,
+          //heightMapIntensity: 50,
           playbackSpeed: 1
         }
         if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
@@ -346,7 +372,7 @@
           await floorShader.ConnectGeometry(geometry)
         })
 
-        var iPc = 1e3
+        var iPc = 500
         var G   = cl * sp * mag * 2
         var geometryData = Array(iPc).fill().map(v=>{
           X = (Rn()-.5) * G
@@ -360,11 +386,11 @@
           name: 'point light',
           showSource: true,
           map: 'https://srmcgann.github.io/Coordinates/resources/stars/star0.png',
-          size: 30,
-          lum: 140,
+          size: 25,
+          lum: 200,
           color: 0xffffff,
         }
-        if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
+        if(0) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           shapes.push(geometry)
         })  
 
@@ -372,13 +398,38 @@
           shapeType: 'particles',
           name: 'particles',
           geometryData,
-          size: 5,
+          size: 10,
           alpha: .3,
           penumbra: .25,
           color: 0xffffff,
         }
         if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           shapes.push(geometry)
+        })  
+
+        var iPc = 1e3
+        var iPv = 5
+        var geometryData = Array(iPc).fill().map(v=>{
+          var p, q, d
+          var vx = S(p=Math.PI*2*Rn()) *
+                       S(q=Rn() < .5 ? Math.PI/2*Rn()**.5 : Math.PI - Math.PI/2*Rn()**.5)* iPv
+          var vy = C(q) * iPv * 3
+          var vz = C(p) * S(q) * iPv
+          baseSplosion = [...baseSplosion, [vx, vy, vz, vx, vy, vz]]
+          return [vx, vy, vz]
+        })
+        var geoOptions = {
+          shapeType: 'particles',
+          name: 'splosion particles',
+          geometryData,
+          x: 0, y:0, z: 0,
+          size: 25,
+          alpha: .75,
+          penumbra: .25,
+          color: 0xffaa22,
+        }
+        if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
+          splosionShape = geometry
         })  
 
         Coordinates.LoadFPSControls(renderer, {
@@ -390,16 +441,16 @@
         })
 
         window.onkeydown = e => {
-          if(e.keyCode == 70){
-            renderer.flyMode = !renderer.flyMode
+          if(document.activeElement.nodeName == 'CANVAS'){
+            if(e.keyCode == 70){
+              renderer.flyMode = !renderer.flyMode
+            }
           }
         }
 
         document.querySelectorAll('.overlay').forEach(e => e.style.display = 'none')
         loadingVideo.pause()
       }
-
-
 
 
       var ctx = Coordinates.Overlay.ctx
@@ -457,34 +508,84 @@
         ctx.fillText(shape.name, lx, ly-fontsize/3)
       }
       
+      const spawnSplosion = (x, y, z) => {
+        splosions = [...splosions, {x, y, z, data: structuredClone(baseSplosion), age: 1}]
+      }
       
-      var missiles = []
-      var missileSpeed = 25
-      var alt = false
+      var shotTimer         = 0
+      var shotTimerInterval = .25
+      var missileSpeed      = 40
+      var missileLife       = 2
       const shoot = player => {
-        var p1 = player.yaw + Math.PI
-        var p2 = -player.pitch + Math.PI / 2
+        var x, y, z, roll, pitch, yaw
+        if(player.interpolated){
+          player = player.player
+          x      = -player.ix
+          y      = player.iy
+          z      = player.iz
+          roll   = player.iroll
+          pitch  = player.ipitch
+          yaw    = player.iyaw
+        }else{
+          x      = player.x
+          y      = player.y
+          z      = player.z
+          roll   = player.roll
+          pitch  = player.pitch
+          yaw    = player.yaw
+        }
+        
+        if(renderer.t - player.shotTimer < shotTimerInterval) return
+        player.shotTimer = renderer.t
+        var p1 = yaw + Math.PI
+        var p2 = -pitch + Math.PI / 2
         var vx = -S(p1) * S(p2) * missileSpeed
         var vy = C(p2) * missileSpeed
         var vz = -C(p1) * S(p2) * missileSpeed
-        alt = !alt
-        var offset = Coordinates.R_pyr(35 * (alt ? -1: 1), 0, 0, player)
+        player.alt = !player.alt
         
+        var offset = Coordinates.R_pyr(35 * (player.alt ? -1: 1), -10, 0, player)
+        if(+player.id != +playerData.id){
+            flashes = [...flashes, {
+            x: -x + offset[0],
+            y: y + offset[1],
+            z: -z + offset[2],
+            age: 1
+          }]
+        }
+        
+        offset = Coordinates.R_pyr(35 * (player.alt ? -1: 1), 0, 0, player)
         missiles = [...missiles, {
-          x: -player.x + offset[0],
-          y: player.y + offset[1],
-          z: -player.z + offset[2],
-          roll: player.roll,
-          pitch: player.pitch,
-          yaw: player.yaw,
-          vx, vy, vz,
+          x: -x + offset[0],
+          y: y + offset[1],
+          z: -z + offset[2],
+          roll, pitch, yaw,
           t: renderer.t,
+          id: player.id,
+          vx, vy, vz,
         }]
+        coms('sync.php', 'syncPlayers')
       }
 
       window.Draw = () => {
         var t = renderer.t
         gameSync()
+        
+        playerData.shooting = false
+        
+        if(document.activeElement.nodeName == 'CANVAS'){
+          renderer.keys.map((v, i) =>{
+            if(v) {
+              switch(i){
+                case 90:
+                  playerData.shooting = true
+                  shoot(playerData)
+                break
+              }
+            }
+          })
+        }
+        
         var fl = -floor(-renderer.x, -renderer.z) - 50
         if(renderer.flyMode){
           if(renderer.y >= fl){
@@ -503,30 +604,15 @@
           }
         }
         
-        if(typeof missileShape != 'undefined'){
-          missiles = missiles.filter(missile => renderer.t - missile.t < 3)
-          missiles.map(missile => {
-            missileShape.x = missile.x += missile.vx
-            missileShape.y = missile.y += missile.vy
-            missileShape.z = missile.z += missile.vz
-            missileShape.roll = missile.roll
-            missileShape.pitch = missile.pitch
-            missileShape.yaw = missile.yaw
-            renderer.Draw(missileShape)
-          })
-        }
-
-
-        shapes.forEach(shape => {
+        shapes.forEach(async shape => {
           switch(shape.name){
             case 'arrow 1':
             case 'arrow 2':
             break
             case 'bird ship':
-              iplayers.map(player => {
+              iplayers.map(async player => {
                 if(+player.id != +playerData.id){
                   
-                  if(!((t*60|0)%20)) shoot(player)
                     
                   player.ix += (-player.x - player.ix) / lerpFactor
                   player.iy += (player.y - player.iy) / lerpFactor
@@ -544,6 +630,11 @@
                   shape.pitch = player.ipitch
                   shape.yaw = player.iyaw
                   
+                  if(player.shooting) shoot({
+                    interpolated: true,
+                    player,
+                  })
+
                   if(typeof gunShape != 'undefined'){
                     gunShape.x = shape.x
                     gunShape.y = shape.y
@@ -551,9 +642,9 @@
                     gunShape.roll = shape.roll
                     gunShape.pitch = shape.pitch
                     gunShape.yaw = shape.yaw
-                    renderer.Draw(gunShape)
+                    await renderer.Draw(gunShape)
                   }
-                  renderer.Draw(shape)
+                  await renderer.Draw(shape)
 
                   drawPlayerNames({
                     x: shape.x,
@@ -586,17 +677,19 @@
                 shape.vertices[i+1] += nay
                 shape.vertices[i+2] += naz
               }
-              renderer.Draw(shape)
+              await renderer.Draw(shape)
             break
             case 'point light':
-              shape.y = renderer.y - floor(shape.x, shape.z) + 450
-              renderer.Draw(shape)
+              shape.x = renderer.x
+              shape.z = renderer.z
+              shape.y = renderer.y + 250 //- floor(shape.x, shape.z) + 450
+              await renderer.Draw(shape)
             break
             case 'background':
               shape.x = -renderer.x
               shape.y = -renderer.y / 2 + 250
               shape.z = -renderer.z
-              renderer.Draw(shape)
+              await renderer.Draw(shape)
             break
             case 'floor':
               for(var i=0; i<shape.vertices.length; i+=9){
@@ -624,12 +717,79 @@
                 }
               }
               //if(!((t*60|0)%240) || (t<.1)) Coordinates.SyncNormals(shape, true)
-              renderer.Draw(shape)
+              await renderer.Draw(shape)
             break
             default:
             break
           }
         })
+
+        if(typeof splosionShape != 'undefined'){
+          splosions = splosions.filter(splosion => splosion.age > 0)
+          splosions.map(async splosion => {
+            for(var j = 0; j < splosionShape.vertices.length; j+=3){
+              var l = splosion.data[j/3|0]
+              if(l[1] + l[4] < floor(l[0] + l[3] + splosion.x,
+                        l[2] + l[5] + splosion.z)) l[4] *= -1
+              splosionShape.vertices[j+0] = l[0] += l[3]
+              splosionShape.vertices[j+1] = l[1] += l[4] -= .5
+              splosionShape.vertices[j+2] = l[2] += l[5]
+            }
+            splosionShape.size = 40 * splosion.age
+            splosion.age -= .005
+            splosionShape.x = splosion.x
+            splosionShape.y = splosion.y
+            splosionShape.z = splosion.z
+            splosionShape.roll = 0 //splosion.roll
+            splosionShape.pitch = 0 //splosion.pitch
+            splosionShape.yaw = 0 //splosion.yaw
+            await renderer.Draw(splosionShape)
+          })
+        }
+        
+        if(typeof missileShape != 'undefined'){
+          missiles = missiles.filter(missile => renderer.t - missile.t < missileLife)
+          missiles.map(async missile => {
+            missileShape.x = missile.x += missile.vx
+            missileShape.y = missile.y += missile.vy
+            missileShape.z = missile.z += missile.vz
+            if(missile.y < floor(missile.x, missile.z)){
+              missile.t = -missileLife
+              spawnSplosion(missile.x, missile.y, missile.z)
+            } else {
+              missileShape.roll = missile.roll
+              missileShape.pitch = missile.pitch
+              missileShape.yaw = missile.yaw
+              await renderer.Draw(missileShape)
+              
+              var offset = Coordinates.R_pyr(0, -5, -22, missile)
+              thrusterShape.x = missile.x + offset[0]
+              thrusterShape.y = missile.y + offset[1]
+              thrusterShape.z = missile.z + offset[2]
+              thrusterShape.roll = missile.roll
+              thrusterShape.pitch = missile.pitch
+              thrusterShape.yaw = missile.yaw
+              await renderer.Draw(thrusterShape)
+            }
+          })
+        }
+
+
+        flashes = flashes.filter(v => v.age > 0)
+        flashes.map(async v => {
+          muzzleFlair.x     = v.x
+          muzzleFlair.y     = v.y
+          muzzleFlair.z     = v.z
+          if(typeof muzzleFlair != 'undefined'){
+            var sz = 250 * v.age
+            for(var j = 0; j < muzzleFlair.vertices.length; j++) {
+              muzzleFlair.vertices[j]=muzzleFlairBase.vertices[j] * sz
+            }
+            await renderer.Draw(muzzleFlair)
+          }
+          v.age -= .25
+        })
+
       }
       launch(960, 540)
 
@@ -659,14 +819,15 @@
               //l[0].name  = player.name
               //l[0].id    = player.id
               var v = l[0]
-              v.name  = player.name
-              v.x     = player.x
-              v.y     = player.y
-              v.z     = player.z
-              v.roll  = player.roll
-              v.pitch = player.pitch
-              v.yaw   = player.yaw
-              v.keep  = true
+              v.shooting = player.shooting
+              v.name     = player.name
+              v.x        = player.x
+              v.y        = player.y
+              v.z        = player.z
+              v.roll     = player.roll
+              v.pitch    = player.pitch
+              v.yaw      = player.yaw
+              v.keep     = true
             }else{
               var newObj = {
                 name: '', id: -1,
@@ -676,14 +837,17 @@
                 iroll: 0, ipitch: 0, iyaw: 0,
                 keep: true,
               }
-              newObj.name  = player.name
-              newObj.id    = +player.id
-              newObj.x     = newObj.ix     = player.x
-              newObj.y     = newObj.iy     = player.y
-              newObj.z     = newObj.iz     = player.z
-              newObj.roll  = newObj.iroll  = player.roll
-              newObj.pitch = newObj.ipitch = player.pitch
-              newObj.yaw   = newObj.iyaw   = player.yaw
+              newObj.alt       = false
+              newObj.shotTimer = player.shotTimer
+              newObj.shooting  = player.shooting
+              newObj.name      = player.name
+              newObj.id        = +player.id
+              newObj.x         = newObj.ix     = player.x
+              newObj.y         = newObj.iy     = player.y
+              newObj.z         = newObj.iz     = player.z
+              newObj.roll      = newObj.iroll  = player.roll
+              newObj.pitch     = newObj.ipitch = player.pitch
+              newObj.yaw       = newObj.iyaw   = player.yaw
               iplayers.push(newObj)
             }
           })
@@ -768,10 +932,11 @@
         y: renderer.y,
         z: renderer.z,
         roll: 0, pitch: 0, yaw: 0,
+        shooting: false,
+        interpolated: false,
       }
-      
+  
       coms('launch.php', 'launchLocalClient')
-
     </script>
   </body>
 </html>

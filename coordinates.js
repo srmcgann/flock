@@ -2,6 +2,10 @@
 // Scott McGann - whitehotrobot@gmail.com
 // all rights reserved - ©2025
 
+// includes
+import * as Hash from "https://srmcgann.github.io/GenHash/hash.js"
+
+
 const S = Math.sin, C = Math.cos, Rn = Math.random
 var audioConsent = false
 //new OffscreenCanvas(256, 256); * might be superior
@@ -215,10 +219,26 @@ const Renderer = async options => {
       
       // depth + alpha bugfix
       if(!sortedPass && (geometry.isSprite || (geometry.isLight && geometry.showSource))) {
-        renderer.alphaQueue = [geometry, ...renderer.alphaQueue]
+        renderer.alphaQueue = [{
+          x: geometry.x,
+          y: geometry.y,
+          z: geometry.z,
+          roll: geometry.roll,
+          pitch: geometry.pitch,
+          yaw: geometry.yaw,
+          geometry
+        }, ...renderer.alphaQueue]
       }else{
         if(!sortedPass && geometry.isParticle ) {
-          renderer.particleQueue = [geometry, ...renderer.particleQueue]
+          renderer.particleQueue = [{
+            x: geometry.x,
+            y: geometry.y,
+            z: geometry.z,
+            roll: geometry.roll,
+            pitch: geometry.pitch,
+            yaw: geometry.yaw,
+            geometry
+          }, ...renderer.particleQueue]
         }else{
 
           ctx.useProgram( sProg )
@@ -1790,7 +1810,8 @@ const BindImage = (gl, resource, binding, textureMode='image', tval=-1, url='', 
   }
   //gl.activeTexture(gl.TEXTURE0)
   gl.bindTexture(gl.TEXTURE_2D, binding)
-  if(texImage.width && texImage.height){
+  if(typeof texImage != 'undefined' && 
+     texImage.width && texImage.height){
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texImage)
   }
   //gl.generateMipmap(gl.TEXTURE_2D)
@@ -2578,12 +2599,11 @@ const BasicShader = async (renderer, options=[]) => {
             geo = R(geoPos, camOri, 0);
             pos = R(vec3(cx, cy, cz),
                      vec3(0.0, -camOri.y + M_PI, 0.0), 0);
-            pos = R(vec3(pos.x, pos.y, pos.z),
+            pos = R(pos,
                      vec3(-camOri.x, 0.0, -camOri.z ), 0);
-            pos = R(pos, geoOri, 1);
-            //pos.x += cpx;
-            //pos.y += cpy;
-            //pos.z += cpz;
+            pos.x += cpx;
+            pos.y += cpy;
+            pos.z += cpz;
             pos = R(pos, camOri, 0);
             nVec = vec3(nVeci.x, nVeci.y, nVeci.z);
             nVec = R(nVec, geoOri, 1);
@@ -4580,9 +4600,10 @@ const Rectangle = async (size = 1, subs = 0, sphereize = 0, flipNormals=false, s
     [0, 1],
   ]]
   
+  
   var ret = await GeometryFromRaw(e, texCoords, size / 1.5,
        Math.max(shapeType == 'sprite' ? 1 : 2, subs),
-             shapeType == 'sprite' ? .1 : sphereize, flipNormals, true, shapeType)
+             shapeType == 'sprite' || shapeType == 'point light' ? 0 : sphereize, flipNormals, true, shapeType)
              
   return ret
 }
@@ -5050,7 +5071,13 @@ const AnimationLoop = (renderer, func) => {
       forSort.sort((a, b) => b.z - a.z)
       renderer.particleQueue.map(async (alphaShape, idx) => {
 
-        var shape = renderer.particleQueue[forSort[idx].idx]
+        var shape = renderer.particleQueue[forSort[idx].idx].geometry
+        shape.x = renderer.particleQueue[forSort[idx].idx].x
+        shape.y = renderer.particleQueue[forSort[idx].idx].y
+        shape.z = renderer.particleQueue[forSort[idx].idx].z
+        shape.roll = renderer.particleQueue[forSort[idx].idx].roll
+        shape.pitch = renderer.particleQueue[forSort[idx].idx].pitch
+        shape.yaw = renderer.particleQueue[forSort[idx].idx].yaw
         
         var shouldDisableDepth = () => {
           return false //shape.isLight || shape.isSprite || shape.disableDepthTest
@@ -5092,7 +5119,13 @@ const AnimationLoop = (renderer, func) => {
       forSort.sort((a, b) => b.z - a.z)
       renderer.alphaQueue.map(async (alphaShape, idx) => {
 
-        var shape = renderer.alphaQueue[forSort[idx].idx]
+        var shape = renderer.alphaQueue[forSort[idx].idx].geometry
+        shape.x = renderer.alphaQueue[forSort[idx].idx].x
+        shape.y = renderer.alphaQueue[forSort[idx].idx].y
+        shape.z = renderer.alphaQueue[forSort[idx].idx].z
+        shape.roll = renderer.alphaQueue[forSort[idx].idx].roll
+        shape.pitch = renderer.alphaQueue[forSort[idx].idx].pitch
+        shape.yaw = renderer.alphaQueue[forSort[idx].idx].yaw
         
         var shouldDisableDepth = () => {
           return false //shape.isLight || shape.isSprite ||shape.disableDepthTest
@@ -5284,6 +5317,8 @@ const getParams = ctx => {
   document.body.appendChild(popup)
 }
 
+const GenHash = data => Hash.GenHash(data)
+
 var Overlay        // for sketch-up, e.g. shape-bounding graphics
 Overlay = await Renderer({ context: { mode: '2d', margin: 0 } })
 Overlay.c.style.background = '#0000'
@@ -5335,4 +5370,5 @@ export {
   ModuleBase,
   LoadFPSControls,
   Overlay,
+  GenHash,
 }
