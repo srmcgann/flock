@@ -228,6 +228,8 @@ const Renderer = async options => {
           roll: geometry.roll,
           pitch: geometry.pitch,
           yaw: geometry.yaw,
+          size: geometry.size,
+          vertices: structuredClone(geometry.vertices),
           geometry
         }, ...renderer.alphaQueue]
       }else{
@@ -239,6 +241,8 @@ const Renderer = async options => {
             roll: geometry.roll,
             pitch: geometry.pitch,
             yaw: geometry.yaw,
+            size: geometry.size,
+            vertices: structuredClone(geometry.vertices),
             geometry
           }, ...renderer.particleQueue]
         }else{
@@ -5073,7 +5077,11 @@ const AnimationLoop = (renderer, func) => {
       forSort.sort((a, b) => b.z - a.z)
       renderer.particleQueue.map(async (alphaShape, idx) => {
 
-        var shape = renderer.particleQueue[forSort[idx].idx].geometry
+        var shape      = renderer.particleQueue[forSort[idx].idx].geometry
+        var tempVerts  = shape.vertices
+        var tempSize   = shape.size
+        shape.size = renderer.particleQueue[forSort[idx].idx].size
+        shape.vertices = renderer.particleQueue[forSort[idx].idx].vertices
         shape.x = renderer.particleQueue[forSort[idx].idx].x
         shape.y = renderer.particleQueue[forSort[idx].idx].y
         shape.z = renderer.particleQueue[forSort[idx].idx].z
@@ -5092,6 +5100,9 @@ const AnimationLoop = (renderer, func) => {
           await renderer.Draw(shape, true, shape.isParticle && penumbra && !m)
         }
         if(shouldDisableDepth()) renderer.ctx.enable(renderer.ctx.DEPTH_TEST)
+          
+        shape.vertices = tempVerts
+        shape.size = tempSize
       })
     
       // disable alpha
@@ -5122,6 +5133,10 @@ const AnimationLoop = (renderer, func) => {
       renderer.alphaQueue.map(async (alphaShape, idx) => {
 
         var shape = renderer.alphaQueue[forSort[idx].idx].geometry
+        var tempVerts  = shape.vertices
+        var tempSize   = shape.size
+        shape.size = renderer.alphaQueue[forSort[idx].idx].size
+        shape.vertices = renderer.alphaQueue[forSort[idx].idx].vertices
         shape.x = renderer.alphaQueue[forSort[idx].idx].x
         shape.y = renderer.alphaQueue[forSort[idx].idx].y
         shape.z = renderer.alphaQueue[forSort[idx].idx].z
@@ -5140,6 +5155,9 @@ const AnimationLoop = (renderer, func) => {
           await renderer.Draw(shape, true, shape.isParticle && penumbra && !m)
         }
         if(shouldDisableDepth()) renderer.ctx.enable(renderer.ctx.DEPTH_TEST)
+
+        shape.vertices = tempVerts
+        shape.size = tempSize
       })
     
       // disable alpha
@@ -5374,8 +5392,6 @@ export {
   Overlay,
   GenHash,
 }
-
-
 
 FILE;
 file_put_contents('../../flock/coordinates.js', $file);

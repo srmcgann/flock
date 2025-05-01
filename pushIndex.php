@@ -91,13 +91,13 @@ $file = <<<FILE
     
       const floor = (X, Z) => {
         //var d = Math.hypot(X, Z) / 500
-        return (S(X/100) * S(Z/100)) * 20
+        return (S(X/250) * S(Z/250)) * 200
       }
       var X, Y, Z
       var cl = 12
       var rw = 1
       var br = 12
-      var sp = 2
+      var sp = 8
       var tx, ty, tz
       var ls = 2**.5 / 2 * sp, p, a
       var texCoords = []
@@ -105,19 +105,23 @@ $file = <<<FILE
       var minZ = 6e6, maxZ = -6e6
       var mag = 12.5 //20 * (2**.5/2)
       var ax, ay, az, nax, nay, naz
-      var gunShape, missileShape, muzzleFlair
-      var muzzleFlairBase, thrusterShape, splosionShape
+      var gunShape, missileShape, bulletShape
+      var muzzleFlair, chaingunShape
+      var muzzleFlairBase, thrusterShape
+      var sparksShape, splosionShape
+      var bulletParticles
 
 
       var refTexture = 'https://srmcgann.github.io/Coordinates/resources/nebugrid_po2.jpg'
-      var heightMap = 'https://srmcgann.github.io/Coordinates/resources/nebugrid_po2.jpg'
+      var heightMap = 'https://srmcgann.github.io/Coordinates/resources/bumpmap_equirectangular_po2.jpg'
+      var floorMap = 'https://srmcgann.github.io/Coordinates/resources/grid_saphire_dark_po2_lowres.jpg'
     
       var rendererOptions = {
         ambientLight: .2,
         width: 960,
         height: 540,
         margin: 0,
-        fov: 800
+        fov: 1600
       }
       var renderer = await Coordinates.Renderer(rendererOptions)
       
@@ -125,20 +129,23 @@ $file = <<<FILE
       
       Coordinates.AnimationLoop(renderer, 'Draw')
 
-      var grav = .666 / 4
+      var grav = .25
       var playervy = 0
       renderer.c.onmousedown = e => {
         if(document.activeElement.nodeName == 'CANVAS' && (!renderer.flyMode &&
            renderer.hasTraction) && e.button == 2){
-          playervy -= 10
+          playervy -= 20
         }
       }
 
       var shapes       = []
       var missiles     = []
+      var bullets      = []
       var flashes      = []
       var splosions    = []
+      var sparks       = []
       var baseSplosion = []
+      var baseSparks   = []
 
       var launch = async (width, height) => {
         var ar = width / height
@@ -165,18 +172,19 @@ $file = <<<FILE
         var shader = await Coordinates.BasicShader(renderer, shaderOptions)
 
         var shaderOptions = [
-          {lighting: { type: 'ambientLight', value: .4}},
+          {lighting: { type: 'ambientLight', value: .5}},
           { uniform: {
             type: 'phong',
-            value: .2
+            value: 0
           } },
           { uniform: {
             type: 'reflection',
             map: refTexture,
+            enabled: false,
             value: .2,
           } },
         ]
-        var missileShader = await Coordinates.BasicShader(renderer, shaderOptions)
+        var projectileShader = await Coordinates.BasicShader(renderer, shaderOptions)
 
         var shaderOptions = [
           {lighting: { type: 'ambientLight', value: .2}},
@@ -207,11 +215,10 @@ $file = <<<FILE
         var geoOptions = {
           shapeType: 'custom shape',
           url: 'https://srmcgann.github.io/Coordinates/custom shapes/bird ship/birdship.json',
-          map: 'https://srmcgann.github.io/Coordinates/custom shapes/bird ship/birdship.jpg',
+          map: 'https://srmcgann.github.io/Coordinates/custom shapes/bird ship/birdship.png',
           name: 'bird ship',
           size: 1,
           rotationMode: 1,
-          color: 0xffffff,
           colorMix: 0,
         }
         if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
@@ -221,7 +228,7 @@ $file = <<<FILE
 
         var geoOptions = {
           shapeType: 'sprite',
-          map: 'https://srmcgann.github.io/Coordinates/resources/stars/star5.png',
+          map: 'https://srmcgann.github.io/Coordinates/resources/stars/megastar.png',
           name: 'muzzle flair',
           size: 1,
           rotationMode: 1,
@@ -249,11 +256,10 @@ $file = <<<FILE
         var geoOptions = {
           shapeType: 'custom shape',
           url: 'https://srmcgann.github.io/Coordinates/custom shapes/bird ship/guns.json',
-          map: 'https://srmcgann.github.io/Coordinates/custom shapes/bird ship/birdship.jpg',
+          map: 'https://srmcgann.github.io/Coordinates/custom shapes/bird ship/birdship.png',
           name: 'gun shape',
           size: 1,
           rotationMode: 1,
-          color: 0xffffff,
           colorMix: 0,
         }
         if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
@@ -263,16 +269,44 @@ $file = <<<FILE
 
         var geoOptions = {
           shapeType: 'custom shape',
+          url: 'https://srmcgann.github.io/Coordinates/custom shapes/bird ship/chainguns.json',
+          map: 'https://srmcgann.github.io/Coordinates/custom shapes/bird ship/birdship.png',
+          name: 'chainguns',
+          size: 1,
+          rotationMode: 1,
+          colorMix: 0,
+        }
+        if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
+          chaingunShape = geometry
+          await shader.ConnectGeometry(geometry)
+        })
+
+        var geoOptions = {
+          shapeType: 'custom shape',
           url: 'https://srmcgann.github.io/Coordinates/custom shapes/bird ship/missile.json',
-          map: 'https://srmcgann.github.io/Coordinates/custom shapes/bird ship/birdship.jpg',
+          map: 'https://srmcgann.github.io/Coordinates/custom shapes/bird ship/birdship.png',
           name: 'missile',
           rotationMode: 1,
-          color: 0xffffff,
+          colorMix: 0,
           size: 1,
         }
         if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           missileShape = geometry
-          await missileShader.ConnectGeometry(geometry)
+          await projectileShader.ConnectGeometry(geometry)
+        })
+
+        var geoOptions = {
+          shapeType: 'custom shape',
+          url: 'https://srmcgann.github.io/Coordinates/custom shapes/bird ship/bullet.json',
+          map: 'https://srmcgann.github.io/Coordinates/custom shapes/bird ship/birdship.png',
+          name: 'bullet',
+          rotationMode: 1,
+          colorMix: 0,
+          size: 1,
+        }
+        if(0) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
+          bulletShape = geometry
+          await projectileShader.ConnectGeometry(geometry)
         })
 
         var geoOptions = {
@@ -281,7 +315,7 @@ $file = <<<FILE
           map: 'https://srmcgann.github.io/Coordinates/custom shapes/arrows/arrow 1b.jpg',
           name: 'arrow 1',
           rotationMode: 1,
-          color: 0xffffff,
+          colorMix: 0,
           size: 1,
         }
         if(0) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
@@ -295,7 +329,7 @@ $file = <<<FILE
           map: 'https://srmcgann.github.io/Coordinates/custom shapes/arrows/arrow 2b.jpg',
           name: 'arrow 2',
           rotationMode: 1,
-          color: 0xffffff,
+          colorMix: 0,
           size: 1,
         }
         if(0) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
@@ -363,7 +397,7 @@ $file = <<<FILE
           colorMix: 0,
           fipNormals: true,
           //pitch: Math.PI,
-          map: heightMap,
+          map: floorMap,
           //heightMap,
           //heightMapIntensity: 50,
           playbackSpeed: 1
@@ -374,14 +408,6 @@ $file = <<<FILE
           await floorShader.ConnectGeometry(geometry)
         })
 
-        var iPc = 500
-        var G   = cl * sp * mag * 2
-        var geometryData = Array(iPc).fill().map(v=>{
-          X = (Rn()-.5) * G
-          Y = (Rn()-.5) * G
-          Z = (Rn()-.5) * G
-          return [X, Y, Z]
-        })
         
         var geoOptions = {
           shapeType: 'point light',
@@ -396,6 +422,14 @@ $file = <<<FILE
           shapes.push(geometry)
         })  
 
+        var iPc = 500
+        var G   = cl * sp * mag * 2
+        var geometryData = Array(iPc).fill().map(v=>{
+          X = (Rn()-.5) * G
+          Y = (Rn()-.5) * G
+          Z = (Rn()-.5) * G
+          return [X, Y, Z]
+        })
         var geoOptions = {
           shapeType: 'particles',
           name: 'particles',
@@ -408,15 +442,30 @@ $file = <<<FILE
         if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           shapes.push(geometry)
         })  
+        
+        var geometryData = Array(1e3).fill().map(v=> [1e6, 1e6, 1e6])
+        var geoOptions = {
+          shapeType: 'particles',
+          name: 'bullet particles',
+          geometryData,
+          size: 10,
+          alpha: 1,
+          penumbra: .5,
+          color: 0x44ffcc,
+        }
+        if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
+          bulletParticles = geometry
+        })  
 
-        var iPc = 1e3
-        var iPv = 5
+        var iPc  = 1e3
+        var iPv  = 10
         var geometryData = Array(iPc).fill().map(v=>{
+          var vel = Rn() * .1 * iPv + iPv * .9
           var p, q, d
           var vx = S(p=Math.PI*2*Rn()) *
-                       S(q=Rn() < .5 ? Math.PI/2*Rn()**.5 : Math.PI - Math.PI/2*Rn()**.5)* iPv
-          var vy = C(q) * iPv * 3
-          var vz = C(p) * S(q) * iPv
+                       S(q=Rn() < .5 ? Math.PI/2*Rn()**.5 : Math.PI - Math.PI/2*Rn()**.5)* vel
+          var vy = C(q) * vel
+          var vz = C(p) * S(q) * vel
           baseSplosion = [...baseSplosion, [vx, vy, vz, vx, vy, vz]]
           return [vx, vy, vz]
         })
@@ -424,7 +473,7 @@ $file = <<<FILE
           shapeType: 'particles',
           name: 'splosion particles',
           geometryData,
-          x: 0, y:0, z: 0,
+          x: 0, y: 0, z: 0,
           size: 25,
           alpha: .75,
           penumbra: .25,
@@ -432,13 +481,39 @@ $file = <<<FILE
         }
         if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           splosionShape = geometry
+        })
+        
+        var iPc  = 50
+        var iPv  = 6
+        var geometryData = Array(iPc).fill().map(v=>{
+          var vel = Rn() * .75 * iPv + iPv * .25
+          var p, q, d
+          var vx = S(p=Math.PI*2*Rn()) *
+                       S(q=Rn() < .5 ? Math.PI/2*Rn()**.5 : Math.PI - Math.PI/2*Rn()**.5)* vel
+          var vy = C(q) * vel
+          var vz = C(p) * S(q) * vel
+          baseSparks = [...baseSparks, [vx, vy, vz, vx, vy, vz]]
+          return [vx, vy, vz]
+        })
+        var geoOptions = {
+          shapeType: 'particles',
+          name: 'spark particles',
+          geometryData,
+          x: 0, y: 0, z: 0,
+          size: 10,
+          alpha: .75,
+          penumbra: .25,
+          color: 0xff4400,
+        }
+        if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
+          sparksShape = geometry
         })  
 
         Coordinates.LoadFPSControls(renderer, {
-          mSpeed: 5,
+          mSpeed: 10,
           flyMode: true,
           crosshairMap: 'https://boss.mindhackers.org/assets/uploads/1rvQ0b.webp',
-          crosshairSel: 3,
+          crosshairSel: 0,
           crosshairSize: .25
         })
 
@@ -511,14 +586,23 @@ $file = <<<FILE
       }
       
       const spawnSplosion = (x, y, z) => {
+        spawnFlash(x, y, z, 5)
         splosions = [...splosions, {x, y, z, data: structuredClone(baseSplosion), age: 1}]
       }
       
-      var shotTimer         = 0
-      var shotTimerInterval = .25
-      var missileSpeed      = 40
-      var missileLife       = 2
-      const shoot = player => {
+      const spawnSparks = (x, y, z) => {
+        sparks = [...sparks, {x, y, z, data: structuredClone(baseSparks), age: 1}]
+      }
+      
+      const spawnFlash = (x, y, z, age = 1) => {
+        flashes = [...flashes, { x, y, z, age }]
+      }
+      
+      var missileShotTimer         = 0
+      var missileShotTimerInterval = .25
+      var missileSpeed             = 40
+      var missileLife              = 2
+      const fireMissile = player => {
         var x, y, z, roll, pitch, yaw
         if(player.interpolated){
           player = player.player
@@ -537,26 +621,21 @@ $file = <<<FILE
           yaw    = player.yaw
         }
         
-        if(renderer.t - player.shotTimer < shotTimerInterval) return
-        player.shotTimer = renderer.t
+        if(renderer.t - player.missileShotTimer < missileShotTimerInterval) return
+        player.missileShotTimer = renderer.t
         var p1 = yaw + Math.PI
         var p2 = -pitch + Math.PI / 2
         var vx = -S(p1) * S(p2) * missileSpeed
         var vy = C(p2) * missileSpeed
         var vz = -C(p1) * S(p2) * missileSpeed
-        player.alt = !player.alt
+        player.missileAlt = !player.missileAlt
         
-        var offset = Coordinates.R_pyr(35 * (player.alt ? -1: 1), -10, 0, player)
-        if(+player.id != +playerData.id){
-            flashes = [...flashes, {
-            x: -x + offset[0],
-            y: y + offset[1],
-            z: -z + offset[2],
-            age: 1
-          }]
-        }
+        var offset = Coordinates.R_pyr(35 * (player.missileAlt ? -1: 1), -10, 0, player)
+        if(+player.id != +playerData.id) spawnFlash(-x + offset[0],
+                                                     y + offset[1],
+                                                     -z + offset[2], .5)
         
-        offset = Coordinates.R_pyr(35 * (player.alt ? -1: 1), 0, 0, player)
+        offset = Coordinates.R_pyr(35 * (player.missileAlt ? -1: 1), 0, 0, player)
         missiles = [...missiles, {
           x: -x + offset[0],
           y: y + offset[1],
@@ -566,22 +645,77 @@ $file = <<<FILE
           id: player.id,
           vx, vy, vz,
         }]
-        coms('sync.php', 'syncPlayers')
+        //coms('sync.php', 'syncPlayers')
       }
 
-      window.Draw = () => {
+      var chaingunShotTimer         = 0
+      var chaingunShotTimerInterval = .02
+      var chaingunSpeed             = 60
+      var chaingunLife              = 1
+      const fireChainguns = player => {
+        var x, y, z, roll, pitch, yaw
+        if(player.interpolated){
+          player = player.player
+          x      = -player.ix
+          y      = player.iy
+          z      = player.iz
+          roll   = player.iroll
+          pitch  = player.ipitch
+          yaw    = player.iyaw
+        }else{
+          x      = player.x
+          y      = player.y
+          z      = player.z
+          roll   = player.roll
+          pitch  = player.pitch
+          yaw    = player.yaw
+        }
+        
+        if(renderer.t - player.chaingunShotTimer < chaingunShotTimerInterval) return
+        player.chaingunShotTimer = renderer.t
+        var p1 = yaw + Math.PI
+        var p2 = -pitch + Math.PI / 2
+        var vx = -S(p1) * S(p2) * chaingunSpeed
+        var vy = C(p2) * chaingunSpeed
+        var vz = -C(p1) * S(p2) * chaingunSpeed
+        player.chaingunAlt = !player.chaingunAlt
+        
+        var offset = Coordinates.R_pyr(20 * (player.chaingunAlt ? -1: 1), -10, 0, player)
+        if(+player.id != +playerData.id) spawnFlash(-x + offset[0],
+                                                     y + offset[1],
+                                                    -z + offset[2], .25)
+        
+        offset = Coordinates.R_pyr(20 * (player.chaingunAlt ? -1: 1), 0, 0, player)
+        bullets = [...bullets, {
+          x: -x + offset[0],
+          y: y + offset[1],
+          z: -z + offset[2],
+          roll, pitch, yaw,
+          t: renderer.t,
+          id: player.id,
+          vx, vy, vz,
+        }]
+        //coms('sync.php', 'syncPlayers')
+      }
+
+      window.Draw = async () => {
         var t = renderer.t
         gameSync()
         
-        playerData.shooting = false
+        playerData.firingMissiles  = false
+        playerData.firingChainguns = false
         
         if(document.activeElement.nodeName == 'CANVAS'){
           renderer.keys.map((v, i) =>{
             if(v) {
               switch(i){
                 case 90:
-                  playerData.shooting = true
-                  shoot(playerData)
+                  playerData.firingMissiles = true
+                  fireMissile(playerData)
+                break
+                case 88:
+                  playerData.firingChainguns = true
+                  fireChainguns(playerData)
                 break
               }
             }
@@ -632,12 +766,17 @@ $file = <<<FILE
                   shape.pitch = player.ipitch
                   shape.yaw = player.iyaw
                   
-                  if(player.shooting) shoot({
+                  if(player.firingMissiles) fireMissile({
                     interpolated: true,
                     player,
                   })
 
-                  if(typeof gunShape != 'undefined'){
+                  if(player.firingChainguns) fireChainguns({
+                    interpolated: true,
+                    player,
+                  })
+
+                  if(typeof gunShape != 'undefined' && player.hasMissiles){
                     gunShape.x = shape.x
                     gunShape.y = shape.y
                     gunShape.z = shape.z
@@ -645,6 +784,17 @@ $file = <<<FILE
                     gunShape.pitch = shape.pitch
                     gunShape.yaw = shape.yaw
                     await renderer.Draw(gunShape)
+                  }
+                  await renderer.Draw(shape)
+
+                  if(typeof chaingunShape != 'undefined' && player.hasChainguns){
+                    chaingunShape.x = shape.x
+                    chaingunShape.y = shape.y
+                    chaingunShape.z = shape.z
+                    chaingunShape.roll = shape.roll
+                    chaingunShape.pitch = shape.pitch
+                    chaingunShape.yaw = shape.yaw
+                    await renderer.Draw(chaingunShape)
                   }
                   await renderer.Draw(shape)
 
@@ -699,11 +849,11 @@ $file = <<<FILE
 
                 for(var m = 3; m--;){
                   ax += shape.vertices[i+m*3+0]
-                  ay += shape.vertices[i+m*3+1]
+                  //ay += shape.vertices[i+m*3+1]
                   az += shape.vertices[i+m*3+2]
                 }
                 ax /= 3
-                ay /= 3
+                //ay /= 3
                 az /= 3
                 
                 if(ax + renderer.x > cl/1*sp*mag) nax -= cl*sp*2*mag
@@ -715,7 +865,7 @@ $file = <<<FILE
                   shape.vertices[i+m*3+0] += nax
                   shape.vertices[i+m*3+2] += naz
                   shape.vertices[i+m*3+1] = floor(shape.vertices[i+m*3+0],
-                                              shape.vertices[i+m*3+2]) - 3
+                                              shape.vertices[i+m*3+2]) - 60
                 }
               }
               //if(!((t*60|0)%240) || (t<.1)) Coordinates.SyncNormals(shape, true)
@@ -727,25 +877,50 @@ $file = <<<FILE
         })
 
         if(typeof splosionShape != 'undefined'){
-          splosions = splosions.filter(splosion => splosion.age > 0)
+          splosions = splosions.filter(splosion => splosion.age > .1)
           splosions.map(async splosion => {
             for(var j = 0; j < splosionShape.vertices.length; j+=3){
               var l = splosion.data[j/3|0]
-              if(l[1] + l[4] < floor(l[0] + l[3] + splosion.x,
-                        l[2] + l[5] + splosion.z)) l[4] *= -1
+              var fl = floor(l[0] + l[3] + splosion.x, l[2] + l[5] + splosion.z) - 60
+              if(l[1] + l[4] < fl) l[4] = Math.abs(l[4])
               splosionShape.vertices[j+0] = l[0] += l[3]
-              splosionShape.vertices[j+1] = l[1] += l[4] -= .5
+              splosionShape.vertices[j+1] = l[1] += l[4] -= grav
               splosionShape.vertices[j+2] = l[2] += l[5]
+              splosionShape.vertices[j+1] = Math.max(fl+1, splosionShape.vertices[j+1])
             }
-            splosionShape.size = 40 * splosion.age
-            splosion.age -= .005
+            splosionShape.size = 40 * splosion.age**.5
+            splosion.age -= .001
             splosionShape.x = splosion.x
             splosionShape.y = splosion.y
             splosionShape.z = splosion.z
-            splosionShape.roll = 0 //splosion.roll
-            splosionShape.pitch = 0 //splosion.pitch
-            splosionShape.yaw = 0 //splosion.yaw
+            splosionShape.roll = 0
+            splosionShape.pitch = 0
+            splosionShape.yaw = 0
             await renderer.Draw(splosionShape)
+          })
+        }
+        
+        if(typeof sparksShape != 'undefined'){
+          sparks = sparks.filter(sparks => sparks.age > .1)
+          sparks.map(async sparks => {
+            for(var j = 0; j < sparksShape.vertices.length; j+=3){
+              var l = sparks.data[j/3|0]
+              var fl = floor(l[0] + l[3] + sparks.x, l[2] + l[5] + sparks.z) - 60
+              if(l[1] + l[4] < fl) l[4] = Math.abs(l[4])
+              sparksShape.vertices[j+0] = l[0] += l[3]
+              sparksShape.vertices[j+1] = l[1] += l[4] -= grav
+              sparksShape.vertices[j+2] = l[2] += l[5]
+              sparksShape.vertices[j+1] = Math.max(fl+1, sparksShape.vertices[j+1])
+            }
+            sparksShape.size = 32 * sparks.age**2
+            sparks.age -= .05
+            sparksShape.x = sparks.x
+            sparksShape.y = sparks.y
+            sparksShape.z = sparks.z
+            sparksShape.roll = 0 //sparks.roll
+            sparksShape.pitch = 0 //sparks.pitch
+            sparksShape.yaw = 0 //sparks.yaw
+            await renderer.Draw(sparksShape)
           })
         }
         
@@ -774,6 +949,27 @@ $file = <<<FILE
               await renderer.Draw(thrusterShape)
             }
           })
+        }
+
+        //if(typeof bulletShape != 'undefined'){
+        if(typeof bulletParticles != 'undefined'){
+          bullets = bullets.filter(bullet => renderer.t - bullet.t < chaingunLife)
+          var l = bulletParticles.vertices
+          for(var i = 0; i < l.length; i++) l[i] = 1e6
+          bullets.map((bullet, idx) => {
+            l[idx*3+0] = bullet.x += bullet.vx
+            l[idx*3+1] = bullet.y += bullet.vy
+            l[idx*3+2] = bullet.z += bullet.vz
+            if(bullet.y < floor(bullet.x, bullet.z)){
+              bullet.t = -chaingunLife
+              spawnSparks(bullet.x, bullet.y, bullet.z)
+            } else {
+              //bulletShape.roll = bullet.roll
+              //bulletShape.pitch = bullet.pitch
+              //bulletShape.yaw = bullet.yaw
+            }
+          })
+          await renderer.Draw(bulletParticles)
         }
 
 
@@ -821,15 +1017,18 @@ $file = <<<FILE
               //l[0].name  = player.name
               //l[0].id    = player.id
               var v = l[0]
-              v.shooting = player.shooting
-              v.name     = player.name
-              v.x        = player.x
-              v.y        = player.y
-              v.z        = player.z
-              v.roll     = player.roll
-              v.pitch    = player.pitch
-              v.yaw      = player.yaw
-              v.keep     = true
+              v.hasMissiles     = player.hasMissiles
+              v.hasChainguns    = player.hasChainguns
+              v.firingMissiles  = player.firingMissiles
+              v.firingChainguns = player.firingChainguns
+              v.name            = player.name
+              v.x               = player.x
+              v.y               = player.y
+              v.z               = player.z
+              v.roll            = player.roll
+              v.pitch           = player.pitch
+              v.yaw             = player.yaw
+              v.keep            = true
             }else{
               var newObj = {
                 name: '', id: -1,
@@ -839,17 +1038,21 @@ $file = <<<FILE
                 iroll: 0, ipitch: 0, iyaw: 0,
                 keep: true,
               }
-              newObj.alt       = false
-              newObj.shotTimer = player.shotTimer
-              newObj.shooting  = player.shooting
-              newObj.name      = player.name
-              newObj.id        = +player.id
-              newObj.x         = newObj.ix     = player.x
-              newObj.y         = newObj.iy     = player.y
-              newObj.z         = newObj.iz     = player.z
-              newObj.roll      = newObj.iroll  = player.roll
-              newObj.pitch     = newObj.ipitch = player.pitch
-              newObj.yaw       = newObj.iyaw   = player.yaw
+              newObj.missileAlt        = false
+              newObj.chaingunAlt       = false
+              newObj.hasMissiles       = player.hasMissiles
+              newObj.hasChainguns      = player.hasChainguns
+              newObj.missileShotTimer  = player.missileShotTimer
+              newObj.chaingunShotTimer = player.chaingunShotTimer
+              newObj.firingMissiles    = player.firingMissiles
+              newObj.name              = player.name
+              newObj.id                = +player.id
+              newObj.x                 = newObj.ix     = player.x
+              newObj.y                 = newObj.iy     = player.y
+              newObj.z                 = newObj.iz     = player.z
+              newObj.roll              = newObj.iroll  = player.roll
+              newObj.pitch             = newObj.ipitch = player.pitch
+              newObj.yaw               = newObj.iyaw   = player.yaw
               iplayers.push(newObj)
             }
           })
@@ -928,13 +1131,16 @@ $file = <<<FILE
       renderer.yaw   = (Rn() - .5) * Math.PI*2
       renderer.pitch = (Rn() - .5) * Math.PI/3
 
+      // network payload (tranceived properties)
       var playerData = {
         name: '', id: -1,
         x: renderer.x,
         y: renderer.y,
         z: renderer.z,
         roll: 0, pitch: 0, yaw: 0,
-        shooting: false,
+        hasMissiles: true,
+        hasChainguns: true,
+        firingMissiles: false,
         interpolated: false,
       }
   
@@ -942,7 +1148,6 @@ $file = <<<FILE
     </script>
   </body>
 </html>
-
 
 
 FILE;
