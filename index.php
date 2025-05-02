@@ -89,7 +89,7 @@
     
       const floor = (X, Z) => {
         //var d = Math.hypot(X, Z) / 500
-        return (S(X/250) * S(Z/250)) * 200
+        return (S(X/1e3) * S(Z/1e3)) * 1e3
       }
       var X, Y, Z
       var cl = 12
@@ -456,13 +456,13 @@
         })  
 
         var iPc  = 1e3
-        var iPv  = 10
+        var iPv  = 16
         var geometryData = Array(iPc).fill().map(v=>{
           var vel = Rn() * .1 * iPv + iPv * .9
           var p, q, d
           var vx = S(p=Math.PI*2*Rn()) *
                        S(q=Rn() < .5 ? Math.PI/2*Rn()**.5 : Math.PI - Math.PI/2*Rn()**.5)* vel
-          var vy = C(q) * vel
+          var vy = C(q) * vel * 1
           var vz = C(p) * S(q) * vel
           baseSplosion = [...baseSplosion, [vx, vy, vz, vx, vy, vz]]
           return [vx, vy, vz]
@@ -484,7 +484,7 @@
         var iPc  = 50
         var iPv  = 6
         var geometryData = Array(iPc).fill().map(v=>{
-          var vel = Rn() * .75 * iPv + iPv * .25
+          var vel = Rn() * .25 * iPv + iPv * .75
           var p, q, d
           var vx = S(p=Math.PI*2*Rn()) *
                        S(q=Rn() < .5 ? Math.PI/2*Rn()**.5 : Math.PI - Math.PI/2*Rn()**.5)* vel
@@ -508,7 +508,7 @@
         })  
 
         Coordinates.LoadFPSControls(renderer, {
-          mSpeed: 10,
+          mSpeed: 20,
           flyMode: true,
           crosshairMap: 'https://boss.mindhackers.org/assets/uploads/1rvQ0b.webp',
           crosshairSel: 0,
@@ -597,7 +597,7 @@
       }
       
       var missileShotTimer         = 0
-      var missileShotTimerInterval = .25
+      var missileShotTimerInterval = .25 / 10
       var missileSpeed             = 40
       var missileLife              = 2
       const fireMissile = player => {
@@ -647,7 +647,7 @@
       }
 
       var chaingunShotTimer         = 0
-      var chaingunShotTimerInterval = .02
+      var chaingunShotTimerInterval = 0 //.02
       var chaingunSpeed             = 60
       var chaingunLife              = 1
       const fireChainguns = player => {
@@ -720,7 +720,7 @@
           })
         }
         
-        var fl = -floor(-renderer.x, -renderer.z) - 50
+        var fl = -floor(-renderer.x, -renderer.z) - 150
         if(renderer.flyMode){
           if(renderer.y >= fl){
             renderer.y = fl
@@ -879,15 +879,20 @@
           splosions.map(async splosion => {
             for(var j = 0; j < splosionShape.vertices.length; j+=3){
               var l = splosion.data[j/3|0]
-              var fl = floor(l[0] + l[3] + splosion.x, l[2] + l[5] + splosion.z) - 60
-              if(l[1] + l[4] < fl) l[4] = Math.abs(l[4])
+              var fl = floor(l[0] + splosion.x, l[2] + splosion.z)
+              if(l[1] < fl) {
+                l[1] = fl
+                l[3] /= 1.01
+                l[4] = l[4] / 1.5 - grav
+                l[5] /= 1.01
+              }
               splosionShape.vertices[j+0] = l[0] += l[3]
               splosionShape.vertices[j+1] = l[1] += l[4] -= grav
               splosionShape.vertices[j+2] = l[2] += l[5]
-              splosionShape.vertices[j+1] = Math.max(fl+1, splosionShape.vertices[j+1])
+              //splosionShape.vertices[j+1] = Math.max(fl + 1, splosionShape.vertices[j+1])
             }
             splosionShape.size = 40 * splosion.age**.5
-            splosion.age -= .001
+            splosion.age -= .01
             splosionShape.x = splosion.x
             splosionShape.y = splosion.y
             splosionShape.z = splosion.z
@@ -903,12 +908,16 @@
           sparks.map(async sparks => {
             for(var j = 0; j < sparksShape.vertices.length; j+=3){
               var l = sparks.data[j/3|0]
-              var fl = floor(l[0] + l[3] + sparks.x, l[2] + l[5] + sparks.z) - 60
-              if(l[1] + l[4] < fl) l[4] = Math.abs(l[4])
+              var fl = floor(l[0] + l[3] + sparks.x, l[2] + l[5] + sparks.z)
+              if(l[1] + l[4] < fl) {
+                l[3] /= 1.1
+                l[4] = Math.abs(l[4]) * .75
+                l[5] /= 1.1
+              }
               sparksShape.vertices[j+0] = l[0] += l[3]
               sparksShape.vertices[j+1] = l[1] += l[4] -= grav
               sparksShape.vertices[j+2] = l[2] += l[5]
-              sparksShape.vertices[j+1] = Math.max(fl+1, sparksShape.vertices[j+1])
+              sparksShape.vertices[j+1] = Math.max(fl, sparksShape.vertices[j+1])
             }
             sparksShape.size = 32 * sparks.age**2
             sparks.age -= .05
@@ -925,13 +934,13 @@
         if(typeof missileShape != 'undefined'){
           missiles = missiles.filter(missile => renderer.t - missile.t < missileLife)
           missiles.map(async missile => {
-            missileShape.x = missile.x += missile.vx
-            missileShape.y = missile.y += missile.vy
-            missileShape.z = missile.z += missile.vz
-            if(missile.y < floor(missile.x, missile.z)){
+            if(missile.y + missile.vy < floor(missile.x + missile.vx, missile.z + missile.vz)){
               missile.t = -missileLife
               spawnSplosion(missile.x, missile.y, missile.z)
             } else {
+              missileShape.x = missile.x += missile.vx
+              missileShape.y = missile.y += missile.vy
+              missileShape.z = missile.z += missile.vz
               missileShape.roll = missile.roll
               missileShape.pitch = missile.pitch
               missileShape.yaw = missile.yaw
