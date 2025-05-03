@@ -267,7 +267,7 @@ const Renderer = async options => {
             }
             
             
-            if(geometry.shapeType == 'particles') {
+            if(geometry.shapeType == 'particles' || geometry.isParticle) {
 
               renderer.ctx.blendFunc(ctx.ONE, ctx.SRC_ALPHA);
               renderer.ctx.enable(ctx.BLEND)
@@ -981,7 +981,7 @@ const LoadGeometry = async (renderer, geoOptions) => {
         isSprite = (!!geoOptions[key]) ? 1.0: 0.0; break
       case 'islight'            :
         isLight = (!!geoOptions[key]) ? 1.0: 0.0; break
-      case 'issprite'           :
+      case 'isparticle'         :
         isParticle = (!!geoOptions[key]) ? 1.0: 0.0; break
       case 'playbackspeed'      :
         playbackSpeed = geoOptions[key]; break
@@ -1312,12 +1312,11 @@ const LoadGeometry = async (renderer, geoOptions) => {
       uvs[i+1] *= scaleUVY
     }
   }
-  
+
   //sphereize
-  if(shapeType != 'particles' &&
-     (shapeType != 'custom shape' &&
-     shapeType != 'obj' ||
-     sphereize || scaleX || scaleY || scaleZ)){
+  if(shapeType != 'particles' && !isParticle &&
+     shapeType != 'custom shape' && shapeType != 'obj' &&
+     (sphereize || scaleX || scaleY || scaleZ)){
     var ip1 = sphereize
     var ip2 = 1 -sphereize
     for(var i = 0; i< vertices.length; i+=3){
@@ -1416,7 +1415,8 @@ const LoadGeometry = async (renderer, geoOptions) => {
   }
 
     
-  if(!resolvedFromCache || !resolved || averageNormals || exportShape){
+  if(!isParticle &&
+     (!resolvedFromCache || !resolved || averageNormals || exportShape)){
     normalVecs    = new Float32Array()
     for(var i=0; i<normals.length; i+=6){
       let X = normals[i+3] - normals[i+0]
@@ -1547,8 +1547,6 @@ const LoadGeometry = async (renderer, geoOptions) => {
     uvs        = new Float32Array(uvs)
   }
   
-  
-  
   // link geometry buffers
   
   //vertics, indices
@@ -1602,7 +1600,8 @@ const LoadGeometry = async (renderer, geoOptions) => {
     x, y, z,
     roll, pitch, yaw, color, colorMix,
     size, subs, name, url, averageNormals,
-    showNormals, shapeType, exportShape,
+    showNormals, exportShape,
+    shapeType: isParticle ? 'particles' : shapeType,
     sphereize, equirectangular, flipNormals,
     vertices, normals, normalVecs, uvs,
     vertex_buffer, Vertex_Index_Buffer,
@@ -1623,7 +1622,8 @@ const LoadGeometry = async (renderer, geoOptions) => {
   })
   
   
-  if(shapeType == 'particles') {
+  if(shapeType == 'particles' || isParticle) {
+    shapeType = 'particles'
     await renderer.particleShader.ConnectGeometry(geometry)
   }else{
     if(shapeType == 'point light' || shapeType == 'sprite'){
@@ -3095,7 +3095,7 @@ const BasicShader = async (renderer, options=[]) => {
           dset.locColor = gl.getUniformLocation(dset.program, "color")
           gl.uniform3f(dset.locColor, ...HexToRGB(geometry.color))
           
-          if(geometry.shapeType == 'particles'){
+          if(geometry.shapeType == 'particles' || geometry.isParticle){
             dset.locPointSize = gl.getUniformLocation(dset.program, "pointSize")
             gl.uniform1f(dset.locPointSize, geometry.size)
           }
@@ -4324,7 +4324,7 @@ const Tetrahedron = async (size = 1, subs = 0, sphereize = 0, flipNormals=false,
   
   return await GeometryFromRaw(e, texCoords, size, subs,
                          sphereize, flipNormals, false, shapeType)
- }
+}
 
 const Octahedron = async (size = 1, subs = 0, sphereize = 0, flipNormals=false, shapeType='octahedron') => {
   var X, Y, Z, p, tx, ty

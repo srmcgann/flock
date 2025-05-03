@@ -22,7 +22,7 @@ $file = <<<'FILE'
       $row = mysqli_fetch_assoc($res);
       $seen = date(strtotime($row['seen']));
       $now = time();
-      if($now - $seen > 15){
+      if($now - $seen > 8){
         endSession($row['slug']);
       } else {
         array_push($players, $row['data']);
@@ -35,6 +35,7 @@ $file = <<<'FILE'
     echo '[false]';
   }
 ?>
+
 FILE;
 file_put_contents('../../flock/sync.php', $file);
 ?>
