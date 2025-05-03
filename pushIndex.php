@@ -91,17 +91,17 @@ $file = <<<FILE
     
       const floor = (X, Z) => {
         //var d = Math.hypot(X, Z) / 500
-        return (S(X/1e3) * S(Z/1e3) + S(X/2500) * S(Z/2500)) ** 3 * 2e3
+        return Math.min(1, Math.max(-1, (S(X/1e3) * S(Z/1e3) + S(X/2500) * S(Z/2500)) ** 3)) * 2e3
       }
 
       var X, Y, Z
       var cl = 12
       var rw = 1
       var br = 12
-      var fcl = cl * 10
+      var fcl = cl * 25
       var frw = 1
-      var fbr = br * 10
-      var sp = 10
+      var fbr = br * 25
+      var sp = 8
       var tx, ty, tz
       var ls = 2**.5 / 2 * sp, p, a
       var texCoords = []
@@ -418,7 +418,7 @@ $file = <<<FILE
           //heightMapIntensity: 50,
           playbackSpeed: 1
         }
-        if(0) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
+        if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           //Coordinates.SyncNormals(geometry, true, true)
           shapes.push(geometry)
           await floorShader.ConnectGeometry(geometry)
@@ -434,11 +434,12 @@ $file = <<<FILE
         var geoOptions = {
           shapeType: 'particles',
           name: 'floor particles',
-          size: 100,
+          size: 75,
           geometryData,
-          color: 0xffffff,
-          alpha: .25,
+          color: 0x22ffcc,
+          alpha: .33,
           penumbra: .5,
+          exportShape: true
         }
         if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           shapes = [...shapes, geometry]
@@ -860,7 +861,7 @@ $file = <<<FILE
                   shape.pitch = player.ipitch
                   shape.yaw = player.iyaw
                   
-                  /*if(player.firingMissiles) fireMissile({
+                  if(player.firingMissiles) fireMissile({
                     interpolated: true,
                     player,
                   })
@@ -869,7 +870,6 @@ $file = <<<FILE
                     interpolated: true,
                     player,
                   })
-                  */
 
                   if(typeof gunShape != 'undefined' && player.hasMissiles){
                     gunShape.x = shape.x
@@ -1042,47 +1042,47 @@ $file = <<<FILE
         if(typeof missileShape != 'undefined'){
           missiles = missiles.filter(missile => renderer.t - missile.t < missileLife)
           missiles.map(async missile => {
-            if(players.length > 0) {
+            if(players.length) {
               var mx = missile.x
               var my = missile.y
               var mz = missile.z
               var mind = 6e6
               var d, midx = 0
               players.map((player, idx) => {
-                console.log(player.id, missile.id)
-                if(+player.id != +missile.id &&
-                  (d=Math.hypot(mx - player.x, my - player.y, mz - player.z)) < mind){
+                if(+playerData.id != +missile.id &&
+                   (d=Math.hypot(mx - player.x, my - player.y, mz - player.z)) < mind){
                     mind = d
                     midx = idx
                 }
               })
               if(mind > missileSpeed * mag * 10) {
-                var tx = -players[midx].x
-                var ty = players[midx].y
-                var tz = -players[midx].z
-                
-                var p1a = missile.yaw
-                var p1b = Math.atan2(tx-mx, tz-mz)
-                var p2a = missile.pitch
-                var p2b = Math.PI /2 - Math.acos((ty-my) / Math.hypot(tx-mx,ty-my,tz-mz))
-                
-                while(Math.abs(p1a - p1b) > Math.PI){
-                  if(p1a > p1b){
-                    p1b += Math.PI * 2
-                  }else{
-                    p1a += Math.PI * 2
+                if(+playerData.id != +missile.id) {
+                  var tx = -players[midx].x
+                  var ty = players[midx].y
+                  var tz = -players[midx].z
+                  
+                  var p1a = missile.yaw
+                  var p1b = Math.atan2(tx-mx, tz-mz)
+                  var p2a = missile.pitch
+                  var p2b = Math.PI /2 - Math.acos((ty-my) / Math.hypot(tx-mx,ty-my,tz-mz))
+                  
+                  while(Math.abs(p1a - p1b) > Math.PI){
+                    if(p1a > p1b){
+                      p1b += Math.PI * 2
+                    }else{
+                      p1a += Math.PI * 2
+                    }
                   }
+                  
+                  missile.yaw -= Math.min(missileHoming/2, Math.max(-missileHoming/2, p1a-p1b))
+                  missile.pitch -= Math.min(missileHoming/2, Math.max(-missileHoming/2, p2a-p2b))
+                  
+                  var p1 = missile.yaw + Math.PI
+                  var p2 = -missile.pitch + Math.PI / 2
+                  missile.vx = -S(p1) * S(p2) * missileSpeed
+                  missile.vy = C(p2) * missileSpeed
+                  missile.vz = -C(p1) * S(p2) * missileSpeed
                 }
-                
-                missile.yaw -= Math.min(missileHoming/2, Math.max(-missileHoming/2, p1a-p1b))
-                missile.pitch -= Math.min(missileHoming/2, Math.max(-missileHoming/2, p2a-p2b))
-                
-                var p1 = missile.yaw + Math.PI
-                var p2 = -missile.pitch + Math.PI / 2
-                missile.vx = -S(p1) * S(p2) * missileSpeed
-                missile.vy = C(p2) * missileSpeed
-                missile.vz = -C(p1) * S(p2) * missileSpeed
-
                 if(missile.y + missile.vy < floor(missile.x + missile.vx, missile.z + missile.vz)){
                   missile.t = -missileLife
                   spawnSplosion(missile.x, missile.y, missile.z)
@@ -1315,7 +1315,6 @@ $file = <<<FILE
     </script>
   </body>
 </html>
-
 
 
 FILE;
