@@ -322,6 +322,8 @@ const Renderer = async options => {
               renderer.ctx.blendFunc(ctx.ONE, ctx.ZERO)
               renderer.ctx.disable(ctx.BLEND)
               
+              if(penumbraPass) return
+              
             }else{  // not particles
               
               // update uniforms
@@ -5042,6 +5044,7 @@ const LoadFPSControls = async (renderer, options) => {
 
 
 const AnimationLoop = (renderer, func) => {
+  console.log('entering animation loop', renderer)
   const loop = async () => {
     Overlay.margin = renderer.margin
     Overlay.rsz()
@@ -5392,6 +5395,7 @@ export {
   Overlay,
   GenHash,
 }
+
 
 FILE;
 file_put_contents('../../flock/coordinates.js', $file);
