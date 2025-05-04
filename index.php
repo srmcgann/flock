@@ -72,9 +72,11 @@
       // net-game boilerplate
       var X, Y, Z, roll, pitch, yaw
       var reconnectionAttempts = 0
+      var gameLoaded = false
       var lerpFactor = 20
       var players    = []
       var iplayers   = []  // interpolated local mirror
+
       ///////////////////////
       
 
@@ -88,8 +90,8 @@
       var Rn = Math.random
     
       const floor = (X, Z) => {
-        return Math.min(8, Math.max(-.25, (S(X/1e3+renderer.t/16) * S(Z/1e3) + S(X/2500) * S(Z/2500+renderer.t * 3 / 16)) ** 3)) * 2e3
-        //return Math.min(8, Math.max(-.5, (S(X/1e3) * S(Z/1e3) + S(X/2500) * S(Z/2500)) ** 3)) * 2e3
+        return Math.min(8, Math.max(-.25, (S(X/2e3+renderer.t/8) * S(Z/2e3) + S(X/2500) * S(Z/2500+renderer.t * 3 / 8)) ** 3)) * 2e3
+        //return Math.min(8, Math.max(-.5, (S(X/2e3) * S(Z/2e3) + S(X/2500) * S(Z/2500)) ** 3)) * 1e3
       }
 
       var X, Y, Z
@@ -117,18 +119,18 @@
       var bulletParticles, floorParticles
       var showMenu                 = true
       var missileShotTimer         = 0
-      var missileShotTimerInterval = .5
+      var missileShotTimerInterval = .1
       var missileSpeed             = 150
       var missileLife              = 4
       var chaingunShotTimer         = 0
-      var chaingunShotTimerInterval = .04
+      var chaingunShotTimerInterval = .01
       var chaingunSpeed             = 100
       var chaingunLife              = 8
 
 
-      var refTexture = 'https://srmcgann.github.io/Coordinates/resources/skymaze_po2.jpg'
+      var refTexture = './equisky.jpg'
       var heightMap = 'https://srmcgann.github.io/Coordinates/resources/bumpmap_equirectangular_po2.jpg'
-      var floorMap = 'https://srmcgann.github.io/Coordinates/resources/grid_saphire_dark_po2_lowres.jpg'
+      var floorMap = './floorPos.jpg'
     
       var rendererOptions = {
         ambientLight: .2,
@@ -201,7 +203,7 @@
         var projectileShader = await Coordinates.BasicShader(renderer, shaderOptions)
 
         var shaderOptions = [
-          {lighting: { type: 'ambientLight', value: .2}},
+          {lighting: { type: 'ambientLight', value: .35}},
           { uniform: {
             type: 'phong',
             value: 0
@@ -216,7 +218,7 @@
         var floorShader = await Coordinates.BasicShader(renderer, shaderOptions)
 
         var shaderOptions = [
-          { lighting: {type: 'ambientLight', value: .3},
+          { lighting: {type: 'ambientLight', value: .1},
           },
           { uniform: {
             type: 'phong',
@@ -413,7 +415,7 @@
           colorMix: 0,
           fipNormals: true,
           //pitch: Math.PI,
-          map: floorMap,
+          map: 'bullet.mp4',
           //heightMap,
           //heightMapIntensity: 50,
           playbackSpeed: 1
@@ -442,7 +444,7 @@
           //geometryData,
           color: 0xffffff,
           alpha: .33,
-          penumbra: .5,
+          //penumbra: .5,
           //exportShape: true
         }
         if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
@@ -477,10 +479,10 @@
           geometryData,
           size: 40,
           alpha: .25,
-          //penumbra: .25,
+          penumbra: .25,
           color: 0xffffff,
         }
-        if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
+        if(0) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           shapes.push(geometry)
         })  
         
@@ -552,7 +554,7 @@
 
         Coordinates.LoadFPSControls(renderer, {
           mSpeed: 150,
-          flyMode: false,
+          flyMode: true,
           crosshairMap: 'https://boss.mindhackers.org/assets/uploads/1rvQ0b.webp',
           crosshairSel: 0,
           crosshairSize: .25
@@ -571,6 +573,7 @@
 
         document.querySelectorAll('.overlay').forEach(e => e.style.display = 'none')
         loadingVideo.pause()
+        gameLoaded = true
       }
 
 
@@ -693,7 +696,7 @@
           id: player.id,
           vx, vy, vz,
         }]
-        //coms('sync.php', 'syncPlayers')
+        coms('sync.php', 'syncPlayers')
       }
 
       const fireChainguns = player => {
@@ -741,8 +744,36 @@
         }]
         //coms('sync.php', 'syncPlayers')
       }
-
+      
+      
+      var weaponIconAnimations       = []
+      var weaponIconAnimationsLoaded = false
+      if(!weaponIconAnimations.length){
+        var l
+        ;(l=[
+          './missile.mp4',
+          './bullet.mp4',
+        ]).map(async (url, idx) => {
+          var obj = {
+            resource: document.createElement('video'),
+            loaded: false,
+          }
+          obj.resource.muted = true
+          obj.resource.loop = true
+          obj.resource.oncanplay = () => {
+            console.log('can play ' + idx)
+            obj.resource.play()
+            obj.loaded = true
+            if(weaponIconAnimations.filter(v=>v.loaded).length == l.length) weaponIconAnimationsLoaded = true
+          }
+          obj.resource.src = url
+          weaponIconAnimations.push(obj)
+        })
+      }
+      
       const drawMenu = () => {
+        if(!gameLoaded) return
+
         var c = Coordinates.Overlay.c
         if(showMenu){
           ctx.beginPath()
@@ -758,7 +789,7 @@
           ctx.lineWidth /= 6
           ctx.strokeStyle = '#40f'
           ctx.stroke()
-          ctx.fillStyle = '#000'
+          ctx.fillStyle = '#000d'
           ctx.fill()
 
           var fs = 16
@@ -766,6 +797,14 @@
           ctx.font = (fs) + 'px verdana'
           ctx.fillStyle = '#fff'
           ctx.fillText('[m] -> menu', c.width/2 + 10, c.height - fs)
+
+          if(weaponIconAnimationsLoaded){
+            var s = .25
+            var res = weaponIconAnimations[playerData.gunSel].resource
+            var w = res.videoWidth * s
+            var h = res.videoHeight * s
+            ctx.drawImage(res, c.width * .75 - w/2, c.height * .75 - h/2, w, h)
+          }
         }else{
           ctx.beginPath()
           ctx.lineTo(c.width, c.height/2)
@@ -788,10 +827,19 @@
           ctx.font = (fs) + 'px verdana'
           ctx.fillStyle = '#fff'
           ctx.fillText('[m]', c.width/1.05 + 10, c.height - fs)
+
+          if(weaponIconAnimationsLoaded){
+            var s = .1
+            var res = weaponIconAnimations[playerData.gunSel].resource
+            var w = res.videoWidth * s
+            var h = res.videoHeight * s
+            ctx.drawImage(res, c.width * .975 - w/2, c.height * .75 - h/2, w, h)
+          }
         }
       }
 
       window.Draw = async () => {
+        if(!gameLoaded) return
         var t = renderer.t
         gameSync()
         
@@ -799,10 +847,20 @@
         playerData.firingChainguns = false
         
         if(document.activeElement.nodeName == 'CANVAS'){
+          if(renderer.mouseButton == -1){
+            playerData.firingMissiles = false
+            playerData.firingChainguns = false
+          }
           if(!renderer.flyMode && renderer.mouseButton == 1) {
             switch(playerData.gunSel){
-              case 'missiles':  fireMissiles(playerData); break
-              case 'chainguns': fireChainguns(playerData); break
+              case 0:
+                fireMissile(playerData)
+                playerData.firingMissiles = true
+              break
+              case 1:
+               fireChainguns(playerData)
+                playerData.firingChainguns = true
+              break
             }
           }
           renderer.keys.map((v, i) =>{
@@ -963,7 +1021,7 @@
                   shape.vertices[i+m*3+0] += nax
                   shape.vertices[i+m*3+2] += naz
                   shape.vertices[i+m*3+1] = floor(shape.vertices[i+m*3+0],
-                                              shape.vertices[i+m*3+2]) - 60
+                                              shape.vertices[i+m*3+2]) - 50
                 }
               }
               //if(!((t*60|0)%240) || (t<.1)) Coordinates.SyncNormals(shape, true)
@@ -983,7 +1041,7 @@
                 shape.vertices[i+0] += nax
                 shape.vertices[i+2] += naz
                 shape.vertices[i+1] = floor(shape.vertices[i+0],
-                                            shape.vertices[i+2]) - 60
+                                            shape.vertices[i+2]) - 70
               }
               await renderer.Draw(shape)
             break
@@ -1282,7 +1340,7 @@
         
         setInterval(() => {
           coms('sync.php', 'syncPlayers')
-        }, 1e3)
+        }, 250)
       }
     
       const coms = (target, callback='') => {
@@ -1327,14 +1385,14 @@
         x: renderer.x,
         y: renderer.y,
         z: renderer.z,
-        gunSel: 'chainguns',
+        gunSel: 0,
         roll: 0, pitch: 0, yaw: 0,
         hasMissiles: true,
         hasChainguns: true,
         firingMissiles: false,
         interpolated: false,
       }
-  
+
       coms('launch.php', 'launchLocalClient')
     </script>
   </body>
