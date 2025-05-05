@@ -251,8 +251,8 @@
 
         var geoOptions = {
           shapeType: 'custom shape',
-          url: 'https://srmcgann.github.io/Coordinates/custom shapes/bird ship/birdship.json',
-          map: 'https://srmcgann.github.io/Coordinates/custom shapes/bird ship/birdship.png',
+          url: './birdship.json',
+          map: './birdship.png',
           name: 'bird ship',
           size: 1,
           rotationMode: 1,
@@ -312,7 +312,7 @@
         var geoOptions = {
           shapeType: 'custom shape',
           url: './powerupRing.json',
-          map: 'https://srmcgann.github.io/objs/bird ship/birdship.png',
+          map: './birdship.png',
           name: 'powerupRing',
           x: 0,
           y: 5000,
@@ -330,8 +330,8 @@
 
         var geoOptions = {
           shapeType: 'custom shape',
-          url: 'https://srmcgann.github.io/Coordinates/custom shapes/bird ship/guns.json',
-          map: 'https://srmcgann.github.io/Coordinates/custom shapes/bird ship/birdship.png',
+          url: './guns.json',
+          map: './birdship.png',
           name: 'gun shape',
           size: 1,
           rotationMode: 1,
@@ -344,8 +344,8 @@
 
         var geoOptions = {
           shapeType: 'custom shape',
-          url: 'https://srmcgann.github.io/Coordinates/custom shapes/bird ship/chainguns.json',
-          map: 'https://srmcgann.github.io/Coordinates/custom shapes/bird ship/birdship.png',
+          url: './chainguns.json',
+          map: './birdship.png',
           name: 'chainguns',
           size: 1,
           rotationMode: 1,
@@ -358,8 +358,8 @@
 
         var geoOptions = {
           shapeType: 'custom shape',
-          url: 'https://srmcgann.github.io/Coordinates/custom shapes/bird ship/missile.json',
-          map: 'https://srmcgann.github.io/Coordinates/custom shapes/bird ship/birdship.png',
+          url: './missile.json',
+          map: './birdship.png',
           name: 'missile',
           rotationMode: 1,
           colorMix: 0,
@@ -372,8 +372,8 @@
 
         var geoOptions = {
           shapeType: 'custom shape',
-          url: 'https://srmcgann.github.io/Coordinates/custom shapes/bird ship/bullet.json',
-          map: 'https://srmcgann.github.io/Coordinates/custom shapes/bird ship/birdship.png',
+          url: './bullet.json',
+          map: './birdship.png',
           name: 'bullet',
           rotationMode: 1,
           colorMix: 0,
@@ -383,35 +383,6 @@
           bulletShape = geometry
           await projectileShader.ConnectGeometry(geometry)
         })
-
-        var geoOptions = {
-          shapeType: 'custom shape',
-          url: 'https://srmcgann.github.io/Coordinates/custom shapes/arrows/arrow 1.json',
-          map: 'https://srmcgann.github.io/Coordinates/custom shapes/arrows/arrow 1b.jpg',
-          name: 'arrow 1',
-          rotationMode: 1,
-          colorMix: 0,
-          size: 1,
-        }
-        if(0) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
-          shapes.push(geometry)
-          await shader.ConnectGeometry(geometry)
-        })
-
-        var geoOptions = {
-          shapeType: 'custom shape',
-          url: 'https://srmcgann.github.io/Coordinates/custom shapes/arrows/arrow 2.json',
-          map: 'https://srmcgann.github.io/Coordinates/custom shapes/arrows/arrow 2b.jpg',
-          name: 'arrow 2',
-          rotationMode: 1,
-          colorMix: 0,
-          size: 1,
-        }
-        if(0) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
-          shapes.push(geometry)
-          await shader.ConnectGeometry(geometry)
-        })
-
 
         var geoOptions = {
           shapeType: 'dodecahedron',
