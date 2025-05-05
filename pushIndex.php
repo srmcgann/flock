@@ -130,8 +130,7 @@ $file = <<<FILE
       var chaingunSpeed             = 100
       var chaingunLife              = 8
       var smokeLife                 = 8
-      var missilePowerupShape
-      var powerupRingShape
+      var missilePowerupShape, powerupRingShape, powerupAura
 
 
       var refTexture = './equisky.jpg'
@@ -195,17 +194,17 @@ $file = <<<FILE
         var shader = await Coordinates.BasicShader(renderer, shaderOptions)
 
         var shaderOptions = [
-          {lighting: { type: 'ambientLight', value: .4}},
+          {lighting: { type: 'ambientLight', value: .5}},
           { uniform: {
             type: 'phong',
-            value: .25
+            value: 0
           } },
           { uniform: {
             type: 'reflection',
             playbackSpeed: 2,
             enabled: true,
             map: refTexture,
-            value: .2
+            value: .5
           } },
         ]
         var powerupShader = await Coordinates.BasicShader(renderer, shaderOptions)
@@ -253,8 +252,8 @@ $file = <<<FILE
 
         var geoOptions = {
           shapeType: 'custom shape',
-          url: 'https://srmcgann.github.io/Coordinates/custom shapes/bird ship/birdship.json',
-          map: 'https://srmcgann.github.io/Coordinates/custom shapes/bird ship/birdship.png',
+          url: './birdship.json',
+          map: './birdship.png',
           name: 'bird ship',
           size: 1,
           rotationMode: 1,
@@ -293,16 +292,28 @@ $file = <<<FILE
         }
 
         var geoOptions = {
+          shapeType: 'sprite',
+          map: './powerupAura.png',
+          name: 'powerup aura',
+          x: 0,
+          y: 5000,
+          z: 0,
+          size: 40
+        }
+        if(1){
+          await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
+            powerupAura = geometry
+          })
+        }
+        
+        var geoOptions = {
           shapeType: 'custom shape',
-          url: './powerupMissile.json',
-          map: 'https://srmcgann.github.io/objs/bird ship/birdship.png',
+          url: './missilePowerup.json',
+          map: './birdship.png',
           name: 'missilePowerup',
           x: 0,
           y: 5000,
           z: 0,
-          size: 1,
-          //averageNormals: true,
-          //exportShape: true,
         }
         if(1){
           await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
@@ -314,14 +325,11 @@ $file = <<<FILE
         var geoOptions = {
           shapeType: 'custom shape',
           url: './powerupRing.json',
-          map: 'https://srmcgann.github.io/objs/bird ship/birdship.png',
+          map: './birdship.png',
           name: 'powerupRing',
           x: 0,
           y: 5000,
           z: 0,
-          size: 1,
-          //averageNormals: true,
-          //exportShape: true,
         }
         if(1){
           await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
@@ -332,8 +340,8 @@ $file = <<<FILE
 
         var geoOptions = {
           shapeType: 'custom shape',
-          url: 'https://srmcgann.github.io/Coordinates/custom shapes/bird ship/guns.json',
-          map: 'https://srmcgann.github.io/Coordinates/custom shapes/bird ship/birdship.png',
+          url: './guns.json',
+          map: './birdship.png',
           name: 'gun shape',
           size: 1,
           rotationMode: 1,
@@ -346,8 +354,8 @@ $file = <<<FILE
 
         var geoOptions = {
           shapeType: 'custom shape',
-          url: 'https://srmcgann.github.io/Coordinates/custom shapes/bird ship/chainguns.json',
-          map: 'https://srmcgann.github.io/Coordinates/custom shapes/bird ship/birdship.png',
+          url: './chainguns.json',
+          map: './birdship.png',
           name: 'chainguns',
           size: 1,
           rotationMode: 1,
@@ -360,8 +368,8 @@ $file = <<<FILE
 
         var geoOptions = {
           shapeType: 'custom shape',
-          url: 'https://srmcgann.github.io/Coordinates/custom shapes/bird ship/missile.json',
-          map: 'https://srmcgann.github.io/Coordinates/custom shapes/bird ship/birdship.png',
+          url: './missile.json',
+          map: './birdship.png',
           name: 'missile',
           rotationMode: 1,
           colorMix: 0,
@@ -374,8 +382,8 @@ $file = <<<FILE
 
         var geoOptions = {
           shapeType: 'custom shape',
-          url: 'https://srmcgann.github.io/Coordinates/custom shapes/bird ship/bullet.json',
-          map: 'https://srmcgann.github.io/Coordinates/custom shapes/bird ship/birdship.png',
+          url: './bullet.json',
+          map: './birdship.png',
           name: 'bullet',
           rotationMode: 1,
           colorMix: 0,
@@ -385,35 +393,6 @@ $file = <<<FILE
           bulletShape = geometry
           await projectileShader.ConnectGeometry(geometry)
         })
-
-        var geoOptions = {
-          shapeType: 'custom shape',
-          url: 'https://srmcgann.github.io/Coordinates/custom shapes/arrows/arrow 1.json',
-          map: 'https://srmcgann.github.io/Coordinates/custom shapes/arrows/arrow 1b.jpg',
-          name: 'arrow 1',
-          rotationMode: 1,
-          colorMix: 0,
-          size: 1,
-        }
-        if(0) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
-          shapes.push(geometry)
-          await shader.ConnectGeometry(geometry)
-        })
-
-        var geoOptions = {
-          shapeType: 'custom shape',
-          url: 'https://srmcgann.github.io/Coordinates/custom shapes/arrows/arrow 2.json',
-          map: 'https://srmcgann.github.io/Coordinates/custom shapes/arrows/arrow 2b.jpg',
-          name: 'arrow 2',
-          rotationMode: 1,
-          colorMix: 0,
-          size: 1,
-        }
-        if(0) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
-          shapes.push(geometry)
-          await shader.ConnectGeometry(geometry)
-        })
-
 
         var geoOptions = {
           shapeType: 'dodecahedron',
@@ -481,7 +460,7 @@ $file = <<<FILE
           //heightMapIntensity: 50,
           playbackSpeed: 1
         }
-        if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
+        if(0) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           //Coordinates.SyncNormals(geometry, true, true)
           shapes.push(geometry)
           await floorShader.ConnectGeometry(geometry)
@@ -994,6 +973,13 @@ $file = <<<FILE
           }
         }
         
+        powerupRingShape.yaw += .05
+        missilePowerupShape.yaw -= .1
+        await renderer.Draw(powerupAura)
+        await renderer.Draw(powerupRingShape)
+        await renderer.Draw(missilePowerupShape)
+
+
         shapes.forEach(async shape => {
           switch(shape.name){
             case 'arrow 1':
@@ -1319,11 +1305,6 @@ $file = <<<FILE
                                       floorParticles.vertices[i+2]) - 90
         }
         await renderer.Draw(floorParticles)
-
-        powerupRingShape.yaw += .1
-        missilePowerupShape.yaw -= .2
-        await renderer.Draw(powerupRingShape)
-        await renderer.Draw(missilePowerupShape)
 
         flashes = flashes.filter(v => v.age > 0)
         flashes.map(async v => {

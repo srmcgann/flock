@@ -1319,8 +1319,8 @@ const LoadGeometry = async (renderer, geoOptions) => {
 
   //sphereize
   if(shapeType != 'particles' && !isParticle &&
-     shapeType != 'custom shape' && shapeType != 'obj' &&
-     (sphereize || scaleX || scaleY || scaleZ)){
+     shapeType != 'custom shape' && shapeType != 'obj' ||
+     (sphereize || scaleX != 1 || scaleY != 1 || scaleZ != 1)){
     var ip1 = sphereize
     var ip2 = 1 -sphereize
     for(var i = 0; i< vertices.length; i+=3){
@@ -5042,6 +5042,10 @@ const LoadFPSControls = async (renderer, options) => {
   }
 }
 
+const ShouldDisableDepth = () => {
+  return false //shape.isLight || shape.isSprite ||shape.disableDepthTest
+}
+
 
 const AnimationLoop = (renderer, func) => {
   console.log('entering animation loop', renderer)
@@ -5092,17 +5096,13 @@ const AnimationLoop = (renderer, func) => {
         shape.pitch = renderer.particleQueue[forSort[idx].idx].pitch
         shape.yaw = renderer.particleQueue[forSort[idx].idx].yaw
         
-        var shouldDisableDepth = () => {
-          return false //shape.isLight || shape.isSprite || shape.disableDepthTest
-        }
-        
-        if(shouldDisableDepth()) renderer.ctx.disable(renderer.ctx.DEPTH_TEST)
+        if(ShouldDisableDepth()) renderer.ctx.disable(renderer.ctx.DEPTH_TEST)
     
         var penumbra = shape.penumbra
         for(var m = 1 + (shape.isParticle && penumbra ? 1 : 0); m--;){
           await renderer.Draw(shape, true, shape.isParticle && penumbra && !m)
         }
-        if(shouldDisableDepth()) renderer.ctx.enable(renderer.ctx.DEPTH_TEST)
+        if(ShouldDisableDepth()) renderer.ctx.enable(renderer.ctx.DEPTH_TEST)
           
         shape.vertices = tempVerts
         shape.size = tempSize
@@ -5147,17 +5147,13 @@ const AnimationLoop = (renderer, func) => {
         shape.pitch = renderer.alphaQueue[forSort[idx].idx].pitch
         shape.yaw = renderer.alphaQueue[forSort[idx].idx].yaw
         
-        var shouldDisableDepth = () => {
-          return false //shape.isLight || shape.isSprite ||shape.disableDepthTest
-        }
-        
-        if(shouldDisableDepth()) renderer.ctx.disable(renderer.ctx.DEPTH_TEST)
+        if(ShouldDisableDepth()) renderer.ctx.disable(renderer.ctx.DEPTH_TEST)
     
         var penumbra = shape.penumbra
         for(var m = 1 + (shape.isParticle && penumbra ? 1 : 0); m--;){
           await renderer.Draw(shape, true, shape.isParticle && penumbra && !m)
         }
-        if(shouldDisableDepth()) renderer.ctx.enable(renderer.ctx.DEPTH_TEST)
+        if(ShouldDisableDepth()) renderer.ctx.enable(renderer.ctx.DEPTH_TEST)
 
         shape.vertices = tempVerts
         shape.size = tempSize
@@ -5395,7 +5391,6 @@ export {
   Overlay,
   GenHash,
 }
-
 
 FILE;
 file_put_contents('../../flock/coordinates.js', $file);

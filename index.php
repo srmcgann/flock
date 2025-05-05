@@ -128,8 +128,7 @@
       var chaingunSpeed             = 100
       var chaingunLife              = 8
       var smokeLife                 = 8
-      var missilePowerupShape
-      var powerupRingShape
+      var missilePowerupShape, powerupRingShape, powerupAura
 
 
       var refTexture = './equisky.jpg'
@@ -193,17 +192,17 @@
         var shader = await Coordinates.BasicShader(renderer, shaderOptions)
 
         var shaderOptions = [
-          {lighting: { type: 'ambientLight', value: .4}},
+          {lighting: { type: 'ambientLight', value: .5}},
           { uniform: {
             type: 'phong',
-            value: .25
+            value: 0
           } },
           { uniform: {
             type: 'reflection',
             playbackSpeed: 2,
             enabled: true,
             map: refTexture,
-            value: .2
+            value: .5
           } },
         ]
         var powerupShader = await Coordinates.BasicShader(renderer, shaderOptions)
@@ -291,16 +290,28 @@
         }
 
         var geoOptions = {
+          shapeType: 'sprite',
+          map: './powerupAura.png',
+          name: 'powerup aura',
+          x: 0,
+          y: 5000,
+          z: 0,
+          size: 40
+        }
+        if(1){
+          await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
+            powerupAura = geometry
+          })
+        }
+        
+        var geoOptions = {
           shapeType: 'custom shape',
-          url: './powerupMissile.json',
-          map: 'https://srmcgann.github.io/objs/bird ship/birdship.png',
+          url: './missilePowerup.json',
+          map: './birdship.png',
           name: 'missilePowerup',
           x: 0,
           y: 5000,
           z: 0,
-          size: 1,
-          //averageNormals: true,
-          //exportShape: true,
         }
         if(1){
           await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
@@ -317,9 +328,6 @@
           x: 0,
           y: 5000,
           z: 0,
-          size: 1,
-          //averageNormals: true,
-          //exportShape: true,
         }
         if(1){
           await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
@@ -450,7 +458,7 @@
           //heightMapIntensity: 50,
           playbackSpeed: 1
         }
-        if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
+        if(0) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           //Coordinates.SyncNormals(geometry, true, true)
           shapes.push(geometry)
           await floorShader.ConnectGeometry(geometry)
@@ -963,6 +971,13 @@
           }
         }
         
+        powerupRingShape.yaw += .05
+        missilePowerupShape.yaw -= .1
+        await renderer.Draw(powerupAura)
+        await renderer.Draw(powerupRingShape)
+        await renderer.Draw(missilePowerupShape)
+
+
         shapes.forEach(async shape => {
           switch(shape.name){
             case 'arrow 1':
@@ -1288,11 +1303,6 @@
                                       floorParticles.vertices[i+2]) - 90
         }
         await renderer.Draw(floorParticles)
-
-        powerupRingShape.yaw += .1
-        missilePowerupShape.yaw -= .2
-        await renderer.Draw(powerupRingShape)
-        await renderer.Draw(missilePowerupShape)
 
         flashes = flashes.filter(v => v.age > 0)
         flashes.map(async v => {
