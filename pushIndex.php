@@ -116,7 +116,7 @@ $file = <<<FILE
       var chaingunDamage = .05
       var gunShape, missileShape, bulletShape
       var muzzleFlair, chaingunShape
-      var muzzleFlairBase, thrusterShape
+      var muzzleFlairBase, thrusterShape, thrusterPowerupShape
       var sparksShape, splosionShape
       var bulletParticles, floorParticles
       var smokeParticles
@@ -130,7 +130,7 @@ $file = <<<FILE
       var chaingunSpeed             = 100
       var chaingunLife              = 8
       var smokeLife                 = 8
-      var missilePowerupShape, powerupRingShape, powerupAura
+      var missilePowerupShape, powerupAura
 
 
       var refTexture = './equisky.jpg'
@@ -194,15 +194,15 @@ $file = <<<FILE
         var shader = await Coordinates.BasicShader(renderer, shaderOptions)
 
         var shaderOptions = [
-          {lighting: { type: 'ambientLight', value: .5}},
+          {lighting: { type: 'ambientLight', value: .25}},
           { uniform: {
             type: 'phong',
-            value: 0
+            value: .2
           } },
           { uniform: {
             type: 'reflection',
             playbackSpeed: 2,
-            enabled: true,
+            enabled: false,
             map: refTexture,
             value: .5
           } },
@@ -293,17 +293,30 @@ $file = <<<FILE
 
         var geoOptions = {
           shapeType: 'sprite',
-          map: './powerupAura.png',
-          name: 'powerup aura',
-          x: 0,
-          y: 5000,
-          z: 0,
-          size: 40
+          map: 'https://srmcgann.github.io/Coordinates/resources/stars/star1.png',
+          name: 'thruster powerup shape',
+          size: 25,
         }
         if(1){
           await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
-            powerupAura = geometry
+            thrusterPowerupShape = geometry
           })
+        }
+
+        var powerupAuras = []
+        for(m = 0; m<6; m++){
+          var geoOptions = {
+            shapeType: 'sprite',
+            map: './powerup_' + m + '.png',
+            name: 'powerup aura ' + m,
+            scaleX: .66,
+            size: 50
+          }
+          if(1){
+            await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
+              powerupAuras = [...powerupAuras, geometry]
+            })
+          }
         }
         
         var geoOptions = {
@@ -311,9 +324,10 @@ $file = <<<FILE
           url: './missilePowerup.json',
           map: './birdship.png',
           name: 'missilePowerup',
-          x: 0,
-          y: 5000,
-          z: 0,
+          scaleX: 2,
+          scaleY: 1.5,
+          scaleZ: 2,
+          exportShape: true,
         }
         if(1){
           await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
@@ -322,22 +336,6 @@ $file = <<<FILE
           })
         }
         
-        var geoOptions = {
-          shapeType: 'custom shape',
-          url: './powerupRing.json',
-          map: './birdship.png',
-          name: 'powerupRing',
-          x: 0,
-          y: 5000,
-          z: 0,
-        }
-        if(1){
-          await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
-            powerupRingShape = geometry
-            await powerupShader.ConnectGeometry(geometry)
-          })
-        }
-
         var geoOptions = {
           shapeType: 'custom shape',
           url: './guns.json',
@@ -460,7 +458,7 @@ $file = <<<FILE
           //heightMapIntensity: 50,
           playbackSpeed: 1
         }
-        if(0) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
+        if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           //Coordinates.SyncNormals(geometry, true, true)
           shapes.push(geometry)
           await floorShader.ConnectGeometry(geometry)
@@ -814,9 +812,9 @@ $file = <<<FILE
         var vy = (Rn()-.5) * iSmokev
         var vz = (Rn()-.5) * iSmokev
         smoke = [...smoke, {
-          x: x + vx,
-          y: y + vy,
-          z: z + vz,
+          x: x,
+          y: y,
+          z: z,
           t: renderer.t,
           vx, vy, vz,
         }]
@@ -973,12 +971,30 @@ $file = <<<FILE
           }
         }
         
-        powerupRingShape.yaw += .05
-        missilePowerupShape.yaw -= .1
-        await renderer.Draw(powerupAura)
-        await renderer.Draw(powerupRingShape)
-        await renderer.Draw(missilePowerupShape)
-
+        var powerup = missilePowerupShape
+        powerup.yaw -= .05
+        
+        var p
+        for(sd = 6; sd--;){
+          var px = (sd-3+.5)*1e3
+          var pz = 0
+          var py = floor(px, pz) + 2e3
+          for(var i = (sd+1) == 1 ? 2: sd; i--;){
+            if(sd == 1 && i) continue
+            powerup.x = px + S(p=Math.PI*2/((sd+1)==1?2:sd)*i + t*4) * 350
+            powerup.y = py
+            powerup.z = pz + C(p) * 350
+            await renderer.Draw(powerup)
+            thrusterPowerupShape.x = px + S(p=Math.PI*2/sd*i + t*4) * 350
+            thrusterPowerupShape.y = py - 450
+            thrusterPowerupShape.z = pz + C(p) * 350
+            await renderer.Draw(thrusterPowerupShape)
+          }
+          powerupAuras[sd].x = px
+          powerupAuras[sd].y = py
+          powerupAuras[sd].z = pz
+          await renderer.Draw(powerupAuras[sd])
+        }
 
         shapes.forEach(async shape => {
           switch(shape.name){
@@ -1500,6 +1516,7 @@ $file = <<<FILE
     </script>
   </body>
 </html>
+
 
 
 FILE;
