@@ -129,6 +129,7 @@
       var chaingunLife              = 8
       var smokeLife                 = 8
       var missilePowerupShape
+      var powerupRingShape
 
 
       var refTexture = './equisky.jpg'
@@ -190,6 +191,22 @@
           } },
         ]
         var shader = await Coordinates.BasicShader(renderer, shaderOptions)
+
+        var shaderOptions = [
+          {lighting: { type: 'ambientLight', value: .4}},
+          { uniform: {
+            type: 'phong',
+            value: .25
+          } },
+          { uniform: {
+            type: 'reflection',
+            playbackSpeed: 2,
+            enabled: true,
+            map: refTexture,
+            value: .2
+          } },
+        ]
+        var powerupShader = await Coordinates.BasicShader(renderer, shaderOptions)
 
         var shaderOptions = [
           {lighting: { type: 'ambientLight', value: .5}},
@@ -274,17 +291,40 @@
         }
 
         var geoOptions = {
-          shapeType: 'sprite',
-          map: './missilePowerup.png',
+          shapeType: 'custom shape',
+          url: './powerupMissile.json',
+          map: 'https://srmcgann.github.io/objs/bird ship/birdship.png',
           name: 'missilePowerup',
           x: 0,
           y: 5000,
           z: 0,
-          size: 50,
+          size: 1,
+          //averageNormals: true,
+          //exportShape: true,
         }
         if(1){
           await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
             missilePowerupShape = geometry
+            await powerupShader.ConnectGeometry(geometry)
+          })
+        }
+        
+        var geoOptions = {
+          shapeType: 'custom shape',
+          url: './powerupRing.json',
+          map: 'https://srmcgann.github.io/objs/bird ship/birdship.png',
+          name: 'powerupRing',
+          x: 0,
+          y: 5000,
+          z: 0,
+          size: 1,
+          //averageNormals: true,
+          //exportShape: true,
+        }
+        if(1){
+          await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
+            powerupRingShape = geometry
+            await powerupShader.ConnectGeometry(geometry)
           })
         }
 
@@ -1278,6 +1318,9 @@
         }
         await renderer.Draw(floorParticles)
 
+        powerupRingShape.yaw += .1
+        missilePowerupShape.yaw -= .2
+        await renderer.Draw(powerupRingShape)
         await renderer.Draw(missilePowerupShape)
 
         flashes = flashes.filter(v => v.age > 0)
