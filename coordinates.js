@@ -2690,7 +2690,7 @@ const BasicShader = async (renderer, options=[]) => {
           if(skip == 0.0){
             float p2 = - (acos(Y / (dist + .0001)) / M_PI * 2.0 - 1.0) * 1.05;
             gl_PointSize = 100.0 * pointSize / dist;
-            gl_Position = vec4(p1, p2, dist/100000.0, 1.0);
+            gl_Position = vec4(p1, p2, dist/300000.0, 1.0);
             vUv = uv;
           }
         } else {  // default projection
@@ -2698,7 +2698,7 @@ const BasicShader = async (renderer, options=[]) => {
           Y = (pos.y + cpy + geo.y) / Z / resolution.y * fov;
           if(Z > 0.0) {
             gl_PointSize = 100.0 * pointSize / Z;
-            gl_Position = vec4(X, Y, Z/100000.0, 1.0);
+            gl_Position = vec4(X, Y, Z/300000.0, 1.0);
             skip = 0.0;
             vUv = uv;
           }else{
@@ -4608,7 +4608,7 @@ const Rectangle = async (size = 1, subs = 0, sphereize = 0, flipNormals=false, s
   
   
   var ret = await GeometryFromRaw(e, texCoords, size / 1.5,
-       Math.max(shapeType == 'sprite' ? 1 : 2, subs),
+       Math.max(shapeType == 'sprite' ? 0 : 2, subs),
              shapeType == 'sprite' || shapeType == 'point light' ? 0 : sphereize, flipNormals, true, shapeType)
              
   return ret

@@ -97,13 +97,13 @@ $file = <<<FILE
       }
 
       var X, Y, Z
-      var cl = 12
+      var cl = 20
       var rw = 1
-      var br = 12
-      var fcl = cl * 25
+      var br = 20
+      var fcl = 4 * 25
       var frw = 1
-      var fbr = br * 25
-      var sp = 8
+      var fbr = 4 * 25
+      var sp = 20
       var tx, ty, tz
       var ls = 2**.5 / 2 * sp, p, a
       var texCoords = []
@@ -114,8 +114,8 @@ $file = <<<FILE
       var missileHoming = .1
       var missileDamage = .5
       var chaingunDamage = .05
-      var gunShape, missileShape, bulletShape
-      var muzzleFlair, chaingunShape
+      var gunShape, missileShape, bulletShape, tractorShape
+      var muzzleFlair, chaingunShape, tractorShapeBaseVertices
       var muzzleFlairBase, thrusterShape, thrusterPowerupShape
       var sparksShape, splosionShape
       var bulletParticles, floorParticles
@@ -130,10 +130,11 @@ $file = <<<FILE
       var chaingunSpeed             = 100
       var chaingunLife              = 8
       var smokeLife                 = 8
-      var missilePowerupShape, powerupAura
+      var missilePowerupShape, powerupAuras, powerupRespawnSpeed = 10
+      var maxPlayerVel = 120
 
 
-      var refTexture = './equisky.jpg'
+      var refTexture = './pseudoEquirectangular_1.jpg'
       var heightMap = 'https://srmcgann.github.io/Coordinates/resources/bumpmap_equirectangular_po2.jpg'
       var floorMap = 'https://srmcgann.github.io/Coordinates/resources/grid_grey_dark_po2_lowres.jpg'
     
@@ -150,12 +151,14 @@ $file = <<<FILE
       
       Coordinates.AnimationLoop(renderer, 'Draw')
 
-      var grav = 5
+      var grav = 12
+      var playervx = 0
       var playervy = 0
+      var playervz = 0
       renderer.c.onmousedown = e => {
         if(document.activeElement.nodeName == 'CANVAS' && (!renderer.flyMode &&
            renderer.hasTraction) && e.button == 2){
-          playervy -= 150
+          playervy -= 350
         }
       }
 
@@ -202,7 +205,7 @@ $file = <<<FILE
           { uniform: {
             type: 'reflection',
             playbackSpeed: 2,
-            enabled: false,
+            enabled: true,
             map: refTexture,
             value: .5
           } },
@@ -303,18 +306,37 @@ $file = <<<FILE
           })
         }
 
-        var powerupAuras = []
-        for(m = 0; m<6; m++){
+        var geoOptions = {
+          shapeType: 'sprite',
+          map: './tractor.png',
+          name: 'tractor',
+          x: 0, z: 0,
+          y: floor(0,0) + 2e4,
+          involveCache: false,
+          size: 100,
+        }
+        if(1){
+          await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
+            tractorShape = geometry
+            tractorShapeBaseVertices = structuredClone(geometry.vertices)
+          })
+        }
+
+        powerupAuras = Array(6).fill()
+        for(var m = 0; m<6; m++){
           var geoOptions = {
             shapeType: 'sprite',
-            map: './powerup_' + m + '.png',
-            name: 'powerup aura ' + m,
+            map: './powerup_' + (m + 1) + '.png',
+            name: 'powerup aura ' + (m + 1),
             scaleX: .66,
-            size: 50
+            size: 25
           }
           if(1){
             await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
-              powerupAuras = [...powerupAuras, geometry]
+              powerupAuras[m] = {
+                geometry,
+                nextRespawn: 0
+              }
             })
           }
         }
@@ -327,7 +349,7 @@ $file = <<<FILE
           scaleX: 2,
           scaleY: 1.5,
           scaleZ: 2,
-          exportShape: true,
+          //exportShape: true,
         }
         if(1){
           await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
@@ -396,7 +418,7 @@ $file = <<<FILE
           shapeType: 'dodecahedron',
           name: 'background',
           subs: 2,
-          size: 1e5,
+          size: 2e5,
           colorMix: 0,
           playbackSpeed: 1,
           scaleUVX: 6,
@@ -446,8 +468,8 @@ $file = <<<FILE
           size: 5,
           //averageNormals: true, 
           geometryData,
-          scaleUVX: 1,
-          scaleUVY: 1,
+          scaleUVX: 4,
+          scaleUVY: 4,
           texCoords,
           color: 0xffffff,
           colorMix: 0,
@@ -478,10 +500,10 @@ $file = <<<FILE
           url: './floorGrid.json?3',
           name: 'floor particles',
           isParticle: true,
-          size: 75,
+          size: 50,
           //geometryData,
           color: 0xffffff,
-          alpha: .33,
+          alpha: .5,
           //penumbra: .5,
           //exportShape: true
         }
@@ -516,11 +538,11 @@ $file = <<<FILE
           name: 'particles',
           geometryData,
           size: 40,
-          alpha: .25,
-          penumbra: .25,
+          alpha: .1,
+          //penumbra: .25,
           color: 0xffffff,
         }
-        if(0) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
+        if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           shapes.push(geometry)
         })  
         
@@ -538,19 +560,19 @@ $file = <<<FILE
           bulletParticles = geometry
         })  
 
-        var geometryData = Array(1e4).fill().map(v=> [1e6, 1e6, 1e6])
+        var geometryData = Array(5e3).fill().map(v=> [1e6, 1e6, 1e6])
         var geoOptions = {
           shapeType: 'particles',
           name: 'smoke particles',
           geometryData,
-          size: 50,
-          alpha: .25,
+          size: 75,
+          alpha: .2,
           penumbra: .5,
           color: 0xeecc88,
         }
         if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           smokeParticles = geometry
-        })  
+        })
 
         var iPc  = 1e3
         var iPv  = 50
@@ -605,8 +627,8 @@ $file = <<<FILE
         })  
 
         Coordinates.LoadFPSControls(renderer, {
-          mSpeed: 150,
-          flyMode: true,
+          mSpeed: 75,
+          flyMode: false,
           crosshairMap: 'https://boss.mindhackers.org/assets/uploads/1rvQ0b.webp',
           crosshairSel: 0,
           crosshairSize: .25
@@ -715,6 +737,16 @@ $file = <<<FILE
       }
       
       const fireMissile = player => {
+        if(renderer.t - player.missileShotTimer < missileShotTimerInterval) return
+        var cont = true
+        if(player.id == playerData.id){
+          if(playerData.missileCount > 0){
+            playerData.missileCount--
+          }else{
+            cont = false
+          }
+        }
+        if(!cont) return
         var x, y, z, roll, pitch, yaw
         if(player.interpolated){
           player = player.player
@@ -733,7 +765,6 @@ $file = <<<FILE
           yaw    = player.yaw
         }
         
-        if(renderer.t - player.missileShotTimer < missileShotTimerInterval) return
         player.missileShotTimer = renderer.t
         var p1 = yaw + Math.PI
         var p2 = -pitch + Math.PI / 2
@@ -748,6 +779,8 @@ $file = <<<FILE
                                                      -z + offset[2], .5)
         
         offset = Coordinates.R_pyr(35 * (player.missileAlt ? -1: 1), 0, 0, player)
+        
+        
         missiles = [...missiles, {
           x: -x + offset[0],
           y: y + offset[1],
@@ -870,6 +903,7 @@ $file = <<<FILE
           ctx.textAlign = 'left'
           ctx.font = (fs) + 'px verdana'
           ctx.fillStyle = '#fff'
+          ctx.fillText(playerData.missileCount, c.width/2 + 10, c.height - fs - c.height/16)
           ctx.fillText('[m] -> menu', c.width/2 + 10, c.height - fs)
 
           if(weaponIconAnimationsLoaded){
@@ -900,6 +934,7 @@ $file = <<<FILE
           ctx.textAlign = 'left'
           ctx.font = (fs) + 'px verdana'
           ctx.fillStyle = '#fff'
+          ctx.fillText(playerData.missileCount, c.width/1.05 + 10, c.height - fs - c.height / 16)
           ctx.fillText('[m]', c.width/1.05 + 10, c.height - fs)
 
           if(weaponIconAnimationsLoaded){
@@ -919,6 +954,8 @@ $file = <<<FILE
         
         playerData.firingMissiles  = false
         playerData.firingChainguns = false
+        
+        playerData.gunSel = playerData.missileCount > 0 ? 0 : 1
         
         if(document.activeElement.nodeName == 'CANVAS'){
           if(renderer.mouseButton == -1){
@@ -953,16 +990,32 @@ $file = <<<FILE
           })
         }
         
-        var fl = -floor(-renderer.x, -renderer.z) - 150
+        var fl = -floor(-renderer.x, -renderer.z) - 200
         if(renderer.flyMode){
           if(renderer.y >= fl){
             renderer.y = fl
             playervy = 0
           }
         }else{
-          playervy += grav
+          var pox = renderer.x
+          var poy = renderer.y
+          var poz = renderer.z
+          renderer.x += playervx
           renderer.y += playervy
-          if(renderer.y > fl - 10){
+          renderer.z += playervz
+          playervx += (renderer.x - pox) / 10
+          playervy += (renderer.y - poy) / 10
+          playervz += (renderer.z - poz) / 10
+          var d1 = Math.hypot(playervx, playervy, playervz) + .001
+          var d2 = Math.min(d1, maxPlayerVel)
+          playervx /= d1
+          playervy /= d1
+          playervz /= d1
+          playervx *= d2
+          playervy *= d2
+          playervz *= d2
+          playervy += grav
+          if(renderer.y > fl - 20){
             renderer.y = fl
             playervy = 0
             renderer.hasTraction = true
@@ -972,28 +1025,43 @@ $file = <<<FILE
         }
         
         var powerup = missilePowerupShape
-        powerup.yaw -= .05
+        powerup.yaw -= .1
         
-        var p
-        for(sd = 6; sd--;){
-          var px = (sd-3+.5)*1e3
-          var pz = 0
-          var py = floor(px, pz) + 2e3
-          for(var i = (sd+1) == 1 ? 2: sd; i--;){
-            if(sd == 1 && i) continue
-            powerup.x = px + S(p=Math.PI*2/((sd+1)==1?2:sd)*i + t*4) * 350
-            powerup.y = py
-            powerup.z = pz + C(p) * 350
-            await renderer.Draw(powerup)
-            thrusterPowerupShape.x = px + S(p=Math.PI*2/sd*i + t*4) * 350
-            thrusterPowerupShape.y = py - 450
-            thrusterPowerupShape.z = pz + C(p) * 350
-            await renderer.Draw(thrusterPowerupShape)
+        if(typeof powerupAuras != 'undefined' && powerupAuras.length == 6){
+          var p
+          for(var o = 0; o<6;o++){
+            if(powerupAuras[o].nextRespawn <= t){
+              var sd = o + 1
+              var px = S( Math.PI*2/6*o + t/16) * 4e4
+              var pz = C( Math.PI*2/6*o + t/16) * 4e4
+              var py = floor(px, pz) + 600
+              var d = Math.hypot(-playerData.x - px, playerData.y - py, -playerData.z - pz)
+              if(d < 1e4){
+                if(d < 1e3){
+                  powerupAuras[o].nextRespawn = t + powerupRespawnSpeed
+                  playerData.missileCount += o+1
+                }else{
+                  for(var i = sd == 1 ? 2: sd; i--;){
+                    if(sd == 1 && i) continue
+                    powerup.x = 
+                      px + S(p=Math.PI*2/(sd==1?2:sd)*i + t*16 / (1+sd/2)) * 350
+                    powerup.y = py
+                    powerup.z = pz + C(p) * 350
+                    await renderer.Draw(powerup)
+                    
+                    thrusterPowerupShape.x = powerup.x
+                    thrusterPowerupShape.y = powerup.y -450
+                    thrusterPowerupShape.z = powerup.z
+                    await renderer.Draw(thrusterPowerupShape)
+                  }
+                }
+              }
+              powerupAuras[o].geometry.x = px
+              powerupAuras[o].geometry.y = py
+              powerupAuras[o].geometry.z = pz
+              await renderer.Draw(powerupAuras[o].geometry)
+            }
           }
-          powerupAuras[sd].x = px
-          powerupAuras[sd].y = py
-          powerupAuras[sd].z = pz
-          await renderer.Draw(powerupAuras[sd])
         }
 
         shapes.forEach(async shape => {
@@ -1110,7 +1178,7 @@ $file = <<<FILE
                   shape.vertices[i+m*3+0] += nax
                   shape.vertices[i+m*3+2] += naz
                   shape.vertices[i+m*3+1] = floor(shape.vertices[i+m*3+0],
-                                              shape.vertices[i+m*3+2]) - 60
+                                              shape.vertices[i+m*3+2]) - 270
                 }
               }
               //if(!((t*60|0)%240) || (t<.1)) Coordinates.SyncNormals(shape, true)
@@ -1120,6 +1188,15 @@ $file = <<<FILE
             break
           }
         })
+        
+        
+        for(var i = 0; i< tractorShape.vertices.length; i+=3){
+          var s =  2+S(t*64)*.1
+          tractorShape.vertices[i+0] = tractorShapeBaseVertices[i+0] * s
+          tractorShape.vertices[i+1] = tractorShapeBaseVertices[i+1] * s
+          tractorShape.vertices[i+2] = tractorShapeBaseVertices[i+2] * s
+        }
+        renderer.Draw(tractorShape)
 
         if(typeof splosionShape != 'undefined'){
           splosions = splosions.filter(splosion => splosion.age > 0)
@@ -1184,7 +1261,7 @@ $file = <<<FILE
             var mx = missile.x
             var my = missile.y
             var mz = missile.z
-            if(Rn() < .75) genSmoke(mx, my, mz)
+            if(Rn() < 1) genSmoke(mx, my, mz)
               
             var mind = 6e6
             var d, midx = -1
@@ -1286,7 +1363,7 @@ $file = <<<FILE
             l[idx*3+2] = bullet.z += bullet.vz
             if(bullet.y < floor(bullet.x, bullet.z)){
               bullet.t = -chaingunLife
-              if(Rn() < .5) spawnSparks(bullet.x, bullet.y, bullet.z)
+              if(Rn() < .33) spawnSparks(bullet.x, bullet.y, bullet.z)
             }
           })
           await renderer.Draw(bulletParticles)
@@ -1310,15 +1387,15 @@ $file = <<<FILE
           ax = floorParticles.vertices[i+0]
           az = floorParticles.vertices[i+2]
           
-          if(ax + renderer.x > fcl*sp*ls) nax -= fcl*sp*ls*2
-          if(ax + renderer.x < -fcl*sp*ls) nax += fcl*sp*ls*2
-          if(az + renderer.z > fbr*sp*ls) naz -= fbr*sp*ls*2
-          if(az + renderer.z < -fbr*sp*ls) naz += fbr*sp*ls*2
+          if(ax + renderer.x > fcl*8*ls) nax -= fcl*8*ls*2
+          if(ax + renderer.x < -fcl*8*ls) nax += fcl*8*ls*2
+          if(az + renderer.z > fbr*8*ls) naz -= fbr*8*ls*2
+          if(az + renderer.z < -fbr*8*ls) naz += fbr*8*ls*2
           
           floorParticles.vertices[i+0] += nax
           floorParticles.vertices[i+2] += naz
           floorParticles.vertices[i+1] = floor(floorParticles.vertices[i+0],
-                                      floorParticles.vertices[i+2]) - 90
+                                      floorParticles.vertices[i+2]) - 300
         }
         await renderer.Draw(floorParticles)
 
@@ -1459,7 +1536,7 @@ $file = <<<FILE
         
         setInterval(() => {
           coms('sync.php', 'syncPlayers')
-        }, 1e3)
+        }, 640)
       }
     
       const coms = (target, callback='') => {
@@ -1504,7 +1581,7 @@ $file = <<<FILE
         x: renderer.x,
         y: renderer.y,
         z: renderer.z,
-        gunSel: 0,
+        gunSel: 0, missileCount: 0,
         roll: 0, pitch: 0, yaw: 0,
         hasMissiles: true,
         hasChainguns: true,
