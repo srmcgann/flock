@@ -91,19 +91,24 @@
     
       const floor = (X, Z) => {
         //return Math.min(8, Math.max(-.25, (S(X/2e3+renderer.t/8) * S(Z/2e3) + S(X/2500) * S(Z/2500+renderer.t * 3 / 8)) ** 3)) * 2e3
-        return Math.min(4, Math.max(-.5, (S(X/1e3) * S(Z/1e3) + S(X/2500) * S(Z/2500)) ** 3)) * 1e3
+
+        return Math.min(.25, Math.max(-.125, (S(X/5e3+renderer.t/4) * S(Z/5e3) + S(X/1e4) * S(Z/1e4+renderer.t/2)) ** 3)) * 1e4
+
+        //return Math.min(4, Math.max(-.5, (S(X/1e3+renderer.t/4) * S(Z/1e3) + S(X/2500) * S(Z/2500+renderer.t*3/4)) ** 3)) * 1e3
       }
 
       var X, Y, Z
-      var cl = 20
+      var cl = 10
       var rw = 1
-      var br = 20
+      var br = 10
       var fcl = 4 * 25
       var frw = 1
       var fbr = 4 * 25
-      var sp = 20
+      var sp = 80
+      var fsp = 20
       var tx, ty, tz
       var ls = 2**.5 / 2 * sp, p, a
+      var fls = 2**.5 / 2 * fsp, p, a
       var texCoords = []
       var minX = 6e6, maxX = -6e6
       var minZ = 6e6, maxZ = -6e6
@@ -115,7 +120,7 @@
       var gunShape, missileShape, bulletShape, tractorShape
       var muzzleFlair, chaingunShape, tractorShapeBaseVertices
       var muzzleFlairBase, thrusterShape, thrusterPowerupShape
-      var sparksShape, splosionShape
+      var sparksShape, splosionShape, weaponsTrackShape
       var bulletParticles, floorParticles
       var smokeParticles
       var showMenu                 = false
@@ -129,12 +134,12 @@
       var chaingunLife              = 8
       var smokeLife                 = 8
       var missilePowerupShape, powerupAuras, powerupRespawnSpeed = 10
-      var maxPlayerVel = 120
+      var maxPlayerVel = 200
 
 
-      var refTexture = './pseudoEquirectangular_1.jpg'
+      var refTexture = 'https://srmcgann.github.io/skyboxes3/HDRI/pano3.jpg'
       var heightMap = 'https://srmcgann.github.io/Coordinates/resources/bumpmap_equirectangular_po2.jpg'
-      var floorMap = 'https://srmcgann.github.io/Coordinates/resources/grid_grey_dark_po2_lowres.jpg'
+      var floorMap = 'https://srmcgann.github.io/Coordinates/resources/grass_texture.jpg'
     
       var rendererOptions = {
         ambientLight: .2,
@@ -149,14 +154,14 @@
       
       Coordinates.AnimationLoop(renderer, 'Draw')
 
-      var grav = 12
+      var grav = 16
       var playervx = 0
       var playervy = 0
       var playervz = 0
       renderer.c.onmousedown = e => {
         if(document.activeElement.nodeName == 'CANVAS' && (!renderer.flyMode &&
            renderer.hasTraction) && e.button == 2){
-          playervy -= 350
+          playervy -= 500
         }
       }
 
@@ -226,7 +231,22 @@
         var projectileShader = await Coordinates.BasicShader(renderer, shaderOptions)
 
         var shaderOptions = [
-          {lighting: { type: 'ambientLight', value: .35}},
+          {lighting: { type: 'ambientLight', value: .2}},
+          { uniform: {
+            type: 'phong',
+            value: 0
+          } },
+          { uniform: {
+            type: 'reflection',
+            map: refTexture,
+            enabled: false,
+            value: .2,
+          } },
+        ]
+        var weaponsTrackShader = await Coordinates.BasicShader(renderer, shaderOptions)
+
+        var shaderOptions = [
+          {lighting: { type: 'ambientLight', value: .2}},
           { uniform: {
             type: 'phong',
             value: 0
@@ -235,13 +255,13 @@
             type: 'reflection',
             enabled: false,
             map: refTexture,
-            value: .25
+            value: .5
           } },
         ]
         var floorShader = await Coordinates.BasicShader(renderer, shaderOptions)
 
         var shaderOptions = [
-          { lighting: {type: 'ambientLight', value: .3},
+          { lighting: {type: 'ambientLight', value: .25},
           },
           { uniform: {
             type: 'phong',
@@ -249,6 +269,22 @@
           } }
         ]
         var backgroundShader = await Coordinates.BasicShader(renderer, shaderOptions)
+
+
+        var geometryData = Array(5e3).fill().map(v=> [1e6, 1e6, 1e6])
+        var geoOptions = {
+          shapeType: 'particles',
+          name: 'smoke particles',
+          geometryData,
+          size: 100,
+          alpha: .2,
+          //penumbra: .2,
+          color: 0xeecc88,
+        }
+        if(0) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
+          smokeParticles = geometry
+        })
+
 
 
         var geoOptions = {
@@ -305,8 +341,30 @@
         }
 
         var geoOptions = {
+          shapeType: 'obj',
+          //shapeType: 'custom shape',
+          map: 'https://boss.mindhackers.org/assets/uploads/1WEszU.jpeg',
+          //url: './weaponsTrack.json',
+          url: 'https://srmcgann.github.io/objs/track.obj',
+          averageNormals: true,
+          scaleX: 10000,
+          scaleZ: 10000,
+          x: 0,
+          y: 0,
+          z: 0,
+          size: 1,
+          exportShape: true,
+        }
+        if(1){
+          await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
+            weaponsTrackShape = geometry
+            await weaponsTrackShader.ConnectGeometry(geometry)
+          })
+        }
+
+        var geoOptions = {
           shapeType: 'sprite',
-          map: './tractor.png',
+          map: 'https://srmcgann.github.io/Coordinates/resources/stars/star7.png',
           name: 'tractor',
           x: 0, z: 0,
           y: floor(0,0) + 2e4,
@@ -327,7 +385,7 @@
             map: './powerup_' + (m + 1) + '.png',
             name: 'powerup aura ' + (m + 1),
             scaleX: .66,
-            size: 25
+            size: 32
           }
           if(1){
             await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
@@ -344,9 +402,9 @@
           url: './missilePowerup.json',
           map: './birdship.png',
           name: 'missilePowerup',
-          scaleX: 2,
-          scaleY: 1.5,
-          scaleZ: 2,
+          scaleX: 3,
+          scaleY: 1,
+          scaleZ: 3,
           //exportShape: true,
         }
         if(1){
@@ -416,7 +474,8 @@
           shapeType: 'dodecahedron',
           name: 'background',
           subs: 2,
-          size: 2e5,
+          size: 3e5,
+          sphereize: 1,
           colorMix: 0,
           playbackSpeed: 1,
           scaleUVX: 6,
@@ -466,8 +525,8 @@
           size: 5,
           //averageNormals: true, 
           geometryData,
-          scaleUVX: 4,
-          scaleUVY: 4,
+          scaleUVX: 1,
+          scaleUVY: 1,
           texCoords,
           color: 0xffffff,
           colorMix: 0,
@@ -479,9 +538,9 @@
           playbackSpeed: 1
         }
         if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
-          //Coordinates.SyncNormals(geometry, true, true)
           shapes.push(geometry)
           await floorShader.ConnectGeometry(geometry)
+          //Coordinates.SyncNormals(geometry, true, true)
         })
 
         /*geometryData = Array(fcl*frw*fbr).fill().map((v, i) => {
@@ -498,11 +557,11 @@
           url: './floorGrid.json?3',
           name: 'floor particles',
           isParticle: true,
-          size: 50,
+          size: 100,
           //geometryData,
-          color: 0xffffff,
-          alpha: .5,
-          //penumbra: .5,
+          color: 0x4400ff,
+          alpha: .25,
+          penumbra: .1,
           //exportShape: true
         }
         if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
@@ -516,7 +575,7 @@
           showSource: true,
           map: 'https://srmcgann.github.io/Coordinates/resources/stars/star0.png',
           size: 25,
-          lum: 200,
+          lum: 1500,
           color: 0xffffff,
         }
         if(0) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
@@ -535,9 +594,9 @@
           shapeType: 'particles',
           name: 'particles',
           geometryData,
-          size: 40,
-          alpha: .1,
-          //penumbra: .25,
+          size: 100,
+          alpha: .2,
+          penumbra: .25,
           color: 0xffffff,
         }
         if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
@@ -558,22 +617,8 @@
           bulletParticles = geometry
         })  
 
-        var geometryData = Array(5e3).fill().map(v=> [1e6, 1e6, 1e6])
-        var geoOptions = {
-          shapeType: 'particles',
-          name: 'smoke particles',
-          geometryData,
-          size: 75,
-          alpha: .2,
-          penumbra: .5,
-          color: 0xeecc88,
-        }
-        if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
-          smokeParticles = geometry
-        })
-
         var iPc  = 1e3
-        var iPv  = 50
+        var iPv  = 100
         var geometryData = Array(iPc).fill().map(v=>{
           var vel = Rn() * .5 * iPv + iPv * .5
           var p, q, d
@@ -599,7 +644,7 @@
         })
         
         var iPc  = 500
-        var iPv  = 16
+        var iPv  = 50
         var geometryData = Array(iPc).fill().map(v=>{
           var vel = Rn() * .2 * iPv + iPv * .8
           var p, q, d
@@ -625,11 +670,11 @@
         })  
 
         Coordinates.LoadFPSControls(renderer, {
-          mSpeed: 75,
+          mSpeed: 300,
           flyMode: false,
-          crosshairMap: 'https://boss.mindhackers.org/assets/uploads/1rvQ0b.webp',
-          crosshairSel: 0,
-          crosshairSize: .25
+          //crosshairMap: 'https://boss.mindhackers.org/assets/uploads/1rvQ0b.webp',
+          crosshairSel: 2,
+          crosshairSize: .5
         })
 
         window.onkeydown = e => {
@@ -988,7 +1033,7 @@
           })
         }
         
-        var fl = -floor(-renderer.x, -renderer.z) - 200
+        var fl = -floor(-renderer.x, -renderer.z) - 1e3
         if(renderer.flyMode){
           if(renderer.y >= fl){
             renderer.y = fl
@@ -1001,9 +1046,9 @@
           renderer.x += playervx
           renderer.y += playervy
           renderer.z += playervz
-          playervx += (renderer.x - pox) / 10
-          playervy += (renderer.y - poy) / 10
-          playervz += (renderer.z - poz) / 10
+          playervx += (renderer.x - pox) / 16
+          playervy += (renderer.y - poy) / 16
+          playervz += (renderer.z - poz) / 16
           var d1 = Math.hypot(playervx, playervy, playervz) + .001
           var d2 = Math.min(d1, maxPlayerVel)
           playervx /= d1
@@ -1022,6 +1067,19 @@
           }
         }
         
+        if(typeof smokeParticles != 'undefined'){
+          smoke = smoke.filter(smoke => renderer.t - smoke.t < smokeLife)
+          var l = smokeParticles.vertices
+          for(var i = 0; i < l.length; i++) l[i] = 1e6
+          smoke.map((smoke, idx) => {
+            l[idx*3+0] = smoke.x += smoke.vx
+            l[idx*3+1] = smoke.y += smoke.vy
+            l[idx*3+2] = smoke.z += smoke.vz
+            //if(smoke.y < floor(smoke.x, smoke.z)) smoke.t = -smokeLife
+          })
+          await renderer.Draw(smokeParticles)
+        }
+
         var powerup = missilePowerupShape
         powerup.yaw -= .1
         
@@ -1030,12 +1088,12 @@
           for(var o = 0; o<6;o++){
             if(powerupAuras[o].nextRespawn <= t){
               var sd = o + 1
-              var px = S( Math.PI*2/6*o + t/16) * 4e4
-              var pz = C( Math.PI*2/6*o + t/16) * 4e4
+              var px = S(p=Math.PI*2/6*o + t/6) * 15500 * 4
+              var pz = C(p) * 15500 * 4
               var py = floor(px, pz) + 600
               var d = Math.hypot(-playerData.x - px, playerData.y - py, -playerData.z - pz)
-              if(d < 1e4){
-                if(d < 1e3){
+              if(d < 2e4){
+                if(d < 600){
                   powerupAuras[o].nextRespawn = t + powerupRespawnSpeed
                   playerData.missileCount += o+1
                 }else{
@@ -1143,9 +1201,9 @@
               await renderer.Draw(shape)
             break
             case 'point light':
-              shape.x = renderer.x
-              shape.z = renderer.z
-              shape.y = renderer.y + 250 //- floor(shape.x, shape.z) + 450
+              //shape.x = renderer.x
+              //shape.z = renderer.z
+              shape.y = floor(shape.x, shape.z) + 1500 //- floor(shape.x, shape.z) + 450
               await renderer.Draw(shape)
             break
             case 'background':
@@ -1176,10 +1234,10 @@
                   shape.vertices[i+m*3+0] += nax
                   shape.vertices[i+m*3+2] += naz
                   shape.vertices[i+m*3+1] = floor(shape.vertices[i+m*3+0],
-                                              shape.vertices[i+m*3+2]) - 270
+                                              shape.vertices[i+m*3+2]) - 4e3
                 }
               }
-              //if(!((t*60|0)%240) || (t<.1)) Coordinates.SyncNormals(shape, true)
+              if(!((t*60|0)%240) || (t<.1)) Coordinates.SyncNormals(shape, true)
               await renderer.Draw(shape)
             break
             default:
@@ -1187,6 +1245,11 @@
           }
         })
         
+        for(var i = 0; i< weaponsTrackShape.vertices.length; i+=3){
+          weaponsTrackShape.vertices[i+1] = floor(weaponsTrackShape.vertices[i+0],
+                                           weaponsTrackShape.vertices[i+2]) - 1e3
+        }
+        renderer.Draw(weaponsTrackShape)
         
         for(var i = 0; i< tractorShape.vertices.length; i+=3){
           var s =  2+S(t*64)*.1
@@ -1205,7 +1268,7 @@
               if(l[1] + splosion.y + l[4]< fl - 55) {
                 l[1] =  fl - 55 - splosion.y
                 l[3] /= 1.5
-                l[4] = Math.abs(l[4]) / 1.5
+                l[4] = Math.abs(l[4]) / 2.5
                 l[5] /= 1.5
               }
               splosionShape.vertices[j+0] = l[0] += l[3]
@@ -1367,28 +1430,15 @@
           await renderer.Draw(bulletParticles)
         }
 
-        if(typeof smokeParticles != 'undefined'){
-          smoke = smoke.filter(smoke => renderer.t - smoke.t < smokeLife)
-          var l = smokeParticles.vertices
-          for(var i = 0; i < l.length; i++) l[i] = 1e6
-          smoke.map((smoke, idx) => {
-            l[idx*3+0] = smoke.x += smoke.vx
-            l[idx*3+1] = smoke.y += smoke.vy
-            l[idx*3+2] = smoke.z += smoke.vz
-            //if(smoke.y < floor(smoke.x, smoke.z)) smoke.t = -smokeLife
-          })
-          await renderer.Draw(smokeParticles)
-        }
-
         for(var i=0; i<floorParticles.vertices.length; i+=3){
           ax = ay = az = nax = nay = naz = 0
           ax = floorParticles.vertices[i+0]
           az = floorParticles.vertices[i+2]
           
-          if(ax + renderer.x > fcl*8*ls) nax -= fcl*8*ls*2
-          if(ax + renderer.x < -fcl*8*ls) nax += fcl*8*ls*2
-          if(az + renderer.z > fbr*8*ls) naz -= fbr*8*ls*2
-          if(az + renderer.z < -fbr*8*ls) naz += fbr*8*ls*2
+          if(ax + renderer.x > fcl*8*fls) nax -= fcl*8*fls*2
+          if(ax + renderer.x < -fcl*8*fls) nax += fcl*8*fls*2
+          if(az + renderer.z > fbr*8*fls) naz -= fbr*8*fls*2
+          if(az + renderer.z < -fbr*8*fls) naz += fbr*8*fls*2
           
           floorParticles.vertices[i+0] += nax
           floorParticles.vertices[i+2] += naz
