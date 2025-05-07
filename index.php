@@ -92,7 +92,7 @@
       const floor = (X, Z) => {
         //return Math.min(8, Math.max(-.25, (S(X/2e3+renderer.t/8) * S(Z/2e3) + S(X/2500) * S(Z/2500+renderer.t * 3 / 8)) ** 3)) * 2e3
 
-        return Math.min(.25, Math.max(-.125, (S(X/5e3+renderer.t/4) * S(Z/5e3) + S(X/1e4) * S(Z/1e4+renderer.t/2)) ** 3)) * 1e4
+        return Math.min(1, Math.max(-.5, (S(X/5e3+renderer.t/4) * S(Z/5e3) + S(X/1e4) * S(Z/1e4+renderer.t/2)) ** 3)) * 1e4
 
         //return Math.min(4, Math.max(-.5, (S(X/1e3+renderer.t/4) * S(Z/1e3) + S(X/2500) * S(Z/2500+renderer.t*3/4)) ** 3)) * 1e3
       }
@@ -104,7 +104,7 @@
       var fcl = 4 * 25
       var frw = 1
       var fbr = 4 * 25
-      var sp = 80
+      var sp = 160
       var fsp = 20
       var tx, ty, tz
       var ls = 2**.5 / 2 * sp, p, a
@@ -114,12 +114,13 @@
       var minZ = 6e6, maxZ = -6e6
       var mag = 12.5 //20 * (2**.5/2)
       var ax, ay, az, nax, nay, naz
-      var missileHoming = .1
+      var missileHoming = .2
       var missileDamage = .5
       var chaingunDamage = .05
       var gunShape, missileShape, bulletShape, tractorShape
       var muzzleFlair, chaingunShape, tractorShapeBaseVertices
       var muzzleFlairBase, thrusterShape, thrusterPowerupShape
+      var medkitShape
       var sparksShape, splosionShape, weaponsTrackShape
       var bulletParticles, floorParticles
       var smokeParticles
@@ -127,7 +128,7 @@
       var missileShotTimer         = 0
       var missileShotTimerInterval = .1
       var missileSpeed             = 150
-      var missileLife              = 4
+      var missileLife              = 6
       var chaingunShotTimer         = 0
       var chaingunShotTimerInterval = .01
       var chaingunSpeed             = 100
@@ -137,9 +138,9 @@
       var maxPlayerVel = 200
 
 
-      var refTexture = 'https://srmcgann.github.io/skyboxes3/HDRI/pano3.jpg'
+      var refTexture = './pseudoEquirectangular_1.jpg'
       var heightMap = 'https://srmcgann.github.io/Coordinates/resources/bumpmap_equirectangular_po2.jpg'
-      var floorMap = 'https://srmcgann.github.io/Coordinates/resources/grass_texture.jpg'
+      var floorMap = './floorCircuitry.jpg'
     
       var rendererOptions = {
         ambientLight: .2,
@@ -161,7 +162,7 @@
       renderer.c.onmousedown = e => {
         if(document.activeElement.nodeName == 'CANVAS' && (!renderer.flyMode &&
            renderer.hasTraction) && e.button == 2){
-          playervy -= 500
+          playervy -= 1500
         }
       }
 
@@ -246,7 +247,7 @@
         var weaponsTrackShader = await Coordinates.BasicShader(renderer, shaderOptions)
 
         var shaderOptions = [
-          {lighting: { type: 'ambientLight', value: .2}},
+          {lighting: { type: 'ambientLight', value: -.05}},
           { uniform: {
             type: 'phong',
             value: 0
@@ -261,7 +262,7 @@
         var floorShader = await Coordinates.BasicShader(renderer, shaderOptions)
 
         var shaderOptions = [
-          { lighting: {type: 'ambientLight', value: .25},
+          { lighting: {type: 'ambientLight', value: .35},
           },
           { uniform: {
             type: 'phong',
@@ -276,12 +277,12 @@
           shapeType: 'particles',
           name: 'smoke particles',
           geometryData,
-          size: 100,
-          alpha: .2,
-          //penumbra: .2,
+          size: 200,
+          alpha: .4,
+          penumbra: .2,
           color: 0xeecc88,
         }
-        if(0) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
+        if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           smokeParticles = geometry
         })
 
@@ -292,7 +293,7 @@
           url: './birdship.json',
           map: './birdship.png',
           name: 'bird ship',
-          size: 1,
+          size: 10,
           rotationMode: 1,
           colorMix: 0,
         }
@@ -320,11 +321,23 @@
           shapeType: 'sprite',
           map: 'https://srmcgann.github.io/Coordinates/resources/stars/star1.png',
           name: 'thruster',
-          size: 5,
+          size: 50,
         }
         if(1){
           await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
             thrusterShape = geometry
+          })
+        }
+
+        var geoOptions = {
+          shapeType: 'sprite',
+          map: 'medkit_lowres.png?2',
+          name: 'medkit',
+          size: 25,
+        }
+        if(1){
+          await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
+            medkitShape = geometry
           })
         }
 
@@ -341,19 +354,18 @@
         }
 
         var geoOptions = {
-          shapeType: 'obj',
-          //shapeType: 'custom shape',
+          //shapeType: 'obj',
+          shapeType: 'custom shape',
           map: 'https://boss.mindhackers.org/assets/uploads/1WEszU.jpeg',
-          //url: './weaponsTrack.json',
-          url: 'https://srmcgann.github.io/objs/track.obj',
-          averageNormals: true,
-          scaleX: 10000,
-          scaleZ: 10000,
+          url: './weaponsTrack.json',
+          //url: 'https://srmcgann.github.io/objs/track.obj',
+          //averageNormals: true,
+          scaleX: 6.33,
+          scaleZ: 6.33,
           x: 0,
           y: 0,
           z: 0,
           size: 1,
-          exportShape: true,
         }
         if(1){
           await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
@@ -419,7 +431,7 @@
           url: './guns.json',
           map: './birdship.png',
           name: 'gun shape',
-          size: 1,
+          size: 10,
           rotationMode: 1,
           colorMix: 0,
         }
@@ -433,7 +445,7 @@
           url: './chainguns.json',
           map: './birdship.png',
           name: 'chainguns',
-          size: 1,
+          size: 10,
           rotationMode: 1,
           colorMix: 0,
         }
@@ -449,7 +461,7 @@
           name: 'missile',
           rotationMode: 1,
           colorMix: 0,
-          size: 1,
+          size: 20,
         }
         if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           missileShape = geometry
@@ -463,7 +475,7 @@
           name: 'bullet',
           rotationMode: 1,
           colorMix: 0,
-          size: 1,
+          size: 10,
         }
         if(0) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           bulletShape = geometry
@@ -525,8 +537,8 @@
           size: 5,
           //averageNormals: true, 
           geometryData,
-          scaleUVX: 1,
-          scaleUVY: 1,
+          scaleUVX: 2,
+          scaleUVY: 3,
           texCoords,
           color: 0xffffff,
           colorMix: 0,
@@ -557,11 +569,11 @@
           url: './floorGrid.json?3',
           name: 'floor particles',
           isParticle: true,
-          size: 100,
+          size: 75,
           //geometryData,
           color: 0x4400ff,
-          alpha: .25,
-          penumbra: .1,
+          alpha: .75,
+          penumbra: .2,
           //exportShape: true
         }
         if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
@@ -572,13 +584,13 @@
         var geoOptions = {
           shapeType: 'point light',
           name: 'point light',
-          showSource: true,
+          showSource: false,
           map: 'https://srmcgann.github.io/Coordinates/resources/stars/star0.png',
           size: 25,
-          lum: 1500,
+          lum: 5000,
           color: 0xffffff,
         }
-        if(0) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
+        if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           shapes.push(geometry)
         })  
 
@@ -615,7 +627,7 @@
         }
         if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           bulletParticles = geometry
-        })  
+        })
 
         var iPc  = 1e3
         var iPv  = 100
@@ -670,7 +682,7 @@
         })  
 
         Coordinates.LoadFPSControls(renderer, {
-          mSpeed: 300,
+          mSpeed: 500,
           flyMode: false,
           //crosshairMap: 'https://boss.mindhackers.org/assets/uploads/1rvQ0b.webp',
           crosshairSel: 2,
@@ -1079,7 +1091,19 @@
           })
           await renderer.Draw(smokeParticles)
         }
-
+        
+        var mcl = 3
+        var mrw = 1
+        var mbr = 3
+        var msp = 1e5
+        for(var i = 0; i<mcl*mrw*mbr; i++){
+          medkitShape.x = ((i%mcl)-mcl/2 + .5) * msp
+          medkitShape.z = ((i/mcl/mrw|0)-mbr/2 + .5) * msp
+          medkitShape.y = 500 + floor(medkitShape.x, medkitShape.z) + (((i/mcl|0)%mrw)-mrw/2 + .5) * msp
+          await renderer.Draw(medkitShape)
+        }
+        
+        
         var powerup = missilePowerupShape
         powerup.yaw -= .1
         
@@ -1093,7 +1117,7 @@
               var py = floor(px, pz) + 600
               var d = Math.hypot(-playerData.x - px, playerData.y - py, -playerData.z - pz)
               if(d < 2e4){
-                if(d < 600){
+                if(d < 1e3){
                   powerupAuras[o].nextRespawn = t + powerupRespawnSpeed
                   playerData.missileCount += o+1
                 }else{
@@ -1203,7 +1227,7 @@
             case 'point light':
               //shape.x = renderer.x
               //shape.z = renderer.z
-              shape.y = floor(shape.x, shape.z) + 1500 //- floor(shape.x, shape.z) + 450
+              shape.y = floor(shape.x, shape.z) + 500 //- floor(shape.x, shape.z) + 450
               await renderer.Draw(shape)
             break
             case 'background':
@@ -1237,7 +1261,7 @@
                                               shape.vertices[i+m*3+2]) - 4e3
                 }
               }
-              if(!((t*60|0)%240) || (t<.1)) Coordinates.SyncNormals(shape, true)
+              //if(!((t*60|0)%240) || (t<.1)) Coordinates.SyncNormals(shape, true)
               await renderer.Draw(shape)
             break
             default:
