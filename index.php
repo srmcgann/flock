@@ -64,7 +64,7 @@
         id="loadingVideo"
         class="overlayContent"
         loop autoplay muted
-        src="https://bosstools.mooo.com/remapper/loading.mp4"
+        src="./loading.mp4"
       ></video>
     </div>
     <script type="module">
@@ -157,11 +157,13 @@
       }
       var renderer = await Coordinates.Renderer(rendererOptions)
       
-      rendererOptions.attachToBody = false
-      rendererOptions.fov = 1500 / 4
-      rendererOptions.width = renderer.width / 2
-      rendererOptions.height = renderer.height / 2
-      var scratchCanvas = await Coordinates.Renderer(rendererOptions)
+      var scratchCanvasOptions = {
+        attachToBody: false,
+        fov: 1500 / 4,
+        width: renderer.width /2,
+        height: renderer.height/2,
+      }
+      var scratchCanvas = await Coordinates.Renderer(scratchCanvasOptions)
       
       renderer.z = 10
       
@@ -295,6 +297,7 @@
             map: refTexture
           } },
         ]
+        
         var skullShader = await Coordinates.BasicShader(scratchCanvas, shaderOptions)
         var geoOptions = {
           shapeType: 'custom shape',
@@ -305,7 +308,7 @@
         await Coordinates.LoadGeometry(scratchCanvas, geoOptions).then(async (geometry) => {
           skullShape = geometry
           await skullShader.ConnectGeometry(geometry)
-        })  
+        })
 
 
         var geometryData = Array(5e3).fill().map(v=> [1e7, 1e7, 1e7])
@@ -392,7 +395,7 @@
 
         var geoOptions = {
           shapeType: 'custom shape',
-          map: 'https://bosstools.mooo.com/assets/uploads/1xPqgj.jpeg',
+          map: './track.jpg',
           url: './weaponsTrack.json',
           //url: 'https://srmcgann.github.io/objs/track.obj',
           //averageNormals: true,
@@ -599,7 +602,6 @@
         }
         if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           shapes.push(geometry)
-          console.log(geometry)
           await floorShader.ConnectGeometry(geometry)
           //Coordinates.SyncNormals(geometry, true, true)
         })
@@ -733,7 +735,6 @@
         Coordinates.LoadFPSControls(renderer, {
           mSpeed: 500,
           flyMode: true,
-          //crosshairMap: 'https://bosstools.mooo.com/assets/uploads/1rvQ0b.webp',
           crosshairSel: 2,
           crosshairSize: .5
         })
@@ -1348,6 +1349,7 @@
                 }
               }
               //if(!((t*60|0)%240) || (t<.1)) Coordinates.SyncNormals(shape, true)
+                console.log(shape)
               await renderer.Draw(shape)
             break
             default:
@@ -1610,7 +1612,7 @@
       launch(renderer.width, renderer.height)
 
       // db sync
-      const URLbase = 'https://bosstools.mooo.com/flock'
+      const URLbase = 'https://boss.mindhackers.org/flock'
       
       const syncPlayers = data => {
         var tPlayers = structuredClone(players)
