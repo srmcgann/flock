@@ -64,7 +64,7 @@
         id="loadingVideo"
         class="overlayContent"
         loop autoplay muted
-        src="https://boss.mindhackers.org/remapper/loading.mp4"
+        src="https://bosstools.mooo.com/remapper/loading.mp4"
       ></video>
     </div>
     <script type="module">
@@ -75,7 +75,7 @@
       var gameLoaded = false
       var lerpFactor = 20
       var players    = []
-      var iplayers   = []  // interpolated local mirror
+      var iplayers   = []  // ip local mirror
 
       ///////////////////////
       
@@ -92,7 +92,7 @@
       const floor = (X, Z) => {
         //return Math.min(8, Math.max(-.25, (S(X/2e3+renderer.t/8) * S(Z/2e3) + S(X/2500) * S(Z/2500+renderer.t * 3 / 8)) ** 3)) * 2e3
 
-        return Math.min(1, Math.max(-.5, (S(X/5e3+renderer.t/4) * S(Z/5e3) + S(X/1e4) * S(Z/1e4+renderer.t/2)) ** 3)) * 1e4
+        return Math.min(1, Math.max(-.5, (S(X/5e3) * S(Z/5e3) + S(X/1e4) * S(Z/1e4)) ** 3)) * 5e3
 
         //return Math.min(4, Math.max(-.5, (S(X/1e3+renderer.t/4) * S(Z/1e3) + S(X/2500) * S(Z/2500+renderer.t*3/4)) ** 3)) * 1e3
       }
@@ -101,10 +101,10 @@
       var cl = 10
       var rw = 1
       var br = 10
+      var sp = 160
       var fcl = 4 * 25
       var frw = 1
       var fbr = 4 * 25
-      var sp = 160
       var fsp = 20
       var tx, ty, tz
       var ls = 2**.5 / 2 * sp, p, a
@@ -114,34 +114,40 @@
       var minZ = 6e6, maxZ = -6e6
       var mag = 12.5 //20 * (2**.5/2)
       var ax, ay, az, nax, nay, naz
-      var missileHoming = .2
-      var missileDamage = .5
-      var chaingunDamage = .05
+      var missileHoming = .15
+      var missileDamage = .25
+      var chaingunDamage = .025
       var gunShape, missileShape, bulletShape, tractorShape
       var muzzleFlair, chaingunShape, tractorShapeBaseVertices
       var muzzleFlairBase, thrusterShape, thrusterPowerupShape
-      var medkitShape
+      var medkitShape, skullShape
       var sparksShape, splosionShape, weaponsTrackShape
       var bulletParticles, floorParticles
       var smokeParticles
       var showMenu                 = false
-      var missileShotTimer         = 0
-      var missileShotTimerInterval = .1
-      var missileSpeed             = 150
+      var mST                      = 0
+      var mSTInterval              = .2
+      var missileSpeed             = 300
       var missileLife              = 6
-      var chaingunShotTimer         = 0
-      var chaingunShotTimerInterval = .01
-      var chaingunSpeed             = 100
-      var chaingunLife              = 8
-      var smokeLife                 = 8
+      var cST                      = 0
+      var cSTInterval              = .01
+      var chaingunSpeed            = 400
+      var chaingunLife             = 8
+      var smokeLife                = 6
       var missilePowerupShape, powerupAuras, powerupRespawnSpeed = 10
       var maxPlayerVel = 200
+      
 
-
-      var refTexture = './pseudoEquirectangular_1.jpg'
+      var refTexture = './pseudoEquirectangular_3.jpg'
       var heightMap = 'https://srmcgann.github.io/Coordinates/resources/bumpmap_equirectangular_po2.jpg'
       var floorMap = './floorCircuitry.jpg'
-    
+      
+      var dmOverlay = new Image()
+      dmOverlay.src = './damage.png'
+
+      var dmDeadOverlay = new Image()
+      dmDeadOverlay.src = './damage_dead.png'
+
       var rendererOptions = {
         ambientLight: .2,
         width: 960,
@@ -151,18 +157,24 @@
       }
       var renderer = await Coordinates.Renderer(rendererOptions)
       
+      rendererOptions.attachToBody = false
+      rendererOptions.fov = 1500 / 4
+      rendererOptions.width = renderer.width / 2
+      rendererOptions.height = renderer.height / 2
+      var scratchCanvas = await Coordinates.Renderer(rendererOptions)
+      
       renderer.z = 10
       
       Coordinates.AnimationLoop(renderer, 'Draw')
 
-      var grav = 16
+      var grav = 20
       var playervx = 0
       var playervy = 0
       var playervz = 0
       renderer.c.onmousedown = e => {
         if(document.activeElement.nodeName == 'CANVAS' && (!renderer.flyMode &&
            renderer.hasTraction) && e.button == 2){
-          playervy -= 1500
+          playervy -= 600
         }
       }
 
@@ -272,14 +284,38 @@
         var backgroundShader = await Coordinates.BasicShader(renderer, shaderOptions)
 
 
-        var geometryData = Array(5e3).fill().map(v=> [1e6, 1e6, 1e6])
+        var shaderOptions = [
+          { uniform: {
+            type: 'phong',
+            value: .15
+          } },
+          { uniform: {
+            type: 'reflection',
+            value: .4,
+            map: refTexture
+          } },
+        ]
+        var skullShader = await Coordinates.BasicShader(scratchCanvas, shaderOptions)
+        var geoOptions = {
+          shapeType: 'custom shape',
+          url: 'https://srmcgann.github.io/Coordinates/custom shapes/skull.json',
+          map: 'https://srmcgann.github.io/Coordinates/custom shapes/skull.jpg',
+          colorMix: 0,
+        }
+        await Coordinates.LoadGeometry(scratchCanvas, geoOptions).then(async (geometry) => {
+          skullShape = geometry
+          await skullShader.ConnectGeometry(geometry)
+        })  
+
+
+        var geometryData = Array(5e3).fill().map(v=> [1e7, 1e7, 1e7])
         var geoOptions = {
           shapeType: 'particles',
           name: 'smoke particles',
           geometryData,
-          size: 200,
+          size: 150,
           alpha: .4,
-          penumbra: .2,
+          penumbra: .3,
           color: 0xeecc88,
         }
         if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
@@ -287,13 +323,14 @@
         })
 
 
-
         var geoOptions = {
           shapeType: 'custom shape',
           url: './birdship.json',
           map: './birdship.png',
           name: 'bird ship',
-          size: 10,
+          scaleX: 10,
+          scaleY: 10,
+          scaleZ: 10,
           rotationMode: 1,
           colorMix: 0,
         }
@@ -306,7 +343,7 @@
           shapeType: 'sprite',
           map: 'https://srmcgann.github.io/Coordinates/resources/stars/megastar.png',
           name: 'muzzle flair',
-          size: 1,
+          size: 5,
           rotationMode: 1,
         }
         if(1){
@@ -321,7 +358,7 @@
           shapeType: 'sprite',
           map: 'https://srmcgann.github.io/Coordinates/resources/stars/star1.png',
           name: 'thruster',
-          size: 50,
+          size: 20,
         }
         if(1){
           await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
@@ -333,7 +370,7 @@
           shapeType: 'sprite',
           map: 'medkit_lowres.png?2',
           name: 'medkit',
-          size: 25,
+          size: 20,
         }
         if(1){
           await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
@@ -345,7 +382,7 @@
           shapeType: 'sprite',
           map: 'https://srmcgann.github.io/Coordinates/resources/stars/star1.png',
           name: 'thruster powerup shape',
-          size: 25,
+          size: 50,
         }
         if(1){
           await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
@@ -354,9 +391,8 @@
         }
 
         var geoOptions = {
-          //shapeType: 'obj',
           shapeType: 'custom shape',
-          map: 'https://boss.mindhackers.org/assets/uploads/1WEszU.jpeg',
+          map: 'https://bosstools.mooo.com/assets/uploads/1xPqgj.jpeg',
           url: './weaponsTrack.json',
           //url: 'https://srmcgann.github.io/objs/track.obj',
           //averageNormals: true,
@@ -396,8 +432,8 @@
             shapeType: 'sprite',
             map: './powerup_' + (m + 1) + '.png',
             name: 'powerup aura ' + (m + 1),
-            scaleX: .66,
-            size: 32
+            scaleY: .66,
+            size: 64
           }
           if(1){
             await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
@@ -414,9 +450,9 @@
           url: './missilePowerup.json',
           map: './birdship.png',
           name: 'missilePowerup',
-          scaleX: 3,
-          scaleY: 1,
-          scaleZ: 3,
+          scaleX: 6,
+          scaleY: 4,
+          scaleZ: 6,
           //exportShape: true,
         }
         if(1){
@@ -431,7 +467,10 @@
           url: './guns.json',
           map: './birdship.png',
           name: 'gun shape',
-          size: 10,
+          scaleX: 10,
+          scaleY: 10,
+          scaleZ: 10,
+          size: 1,
           rotationMode: 1,
           colorMix: 0,
         }
@@ -445,7 +484,10 @@
           url: './chainguns.json',
           map: './birdship.png',
           name: 'chainguns',
-          size: 10,
+          scaleX: 10,
+          scaleY: 10,
+          scaleZ: 10,
+          size: 1,
           rotationMode: 1,
           colorMix: 0,
         }
@@ -455,13 +497,16 @@
         })
 
         var geoOptions = {
-          shapeType: 'custom shape',
-          url: './missile.json',
+          shapeType: 'obj',
+          url: 'https://srmcgann.github.io/objs/bird ship/missile.obj',
           map: './birdship.png',
           name: 'missile',
           rotationMode: 1,
           colorMix: 0,
-          size: 20,
+          scaleX: 50,
+          scaleY: 50,
+          scaleZ: 50,
+          size: 1,
         }
         if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           missileShape = geometry
@@ -475,7 +520,10 @@
           name: 'bullet',
           rotationMode: 1,
           colorMix: 0,
-          size: 10,
+          scaleX: 10,
+          scaleY: 10,
+          scaleZ: 10,
+          size: 1,
         }
         if(0) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           bulletShape = geometry
@@ -538,7 +586,7 @@
           //averageNormals: true, 
           geometryData,
           scaleUVX: 2,
-          scaleUVY: 3,
+          scaleUVY: 2,
           texCoords,
           color: 0xffffff,
           colorMix: 0,
@@ -551,6 +599,7 @@
         }
         if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           shapes.push(geometry)
+          console.log(geometry)
           await floorShader.ConnectGeometry(geometry)
           //Coordinates.SyncNormals(geometry, true, true)
         })
@@ -587,7 +636,7 @@
           showSource: false,
           map: 'https://srmcgann.github.io/Coordinates/resources/stars/star0.png',
           size: 25,
-          lum: 5000,
+          lum: 1e4,
           color: 0xffffff,
         }
         if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
@@ -606,9 +655,9 @@
           shapeType: 'particles',
           name: 'particles',
           geometryData,
-          size: 100,
-          alpha: .2,
-          penumbra: .25,
+          size: 200,
+          alpha: .3,
+          penumbra: .3,
           color: 0xffffff,
         }
         if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
@@ -620,8 +669,8 @@
           shapeType: 'particles',
           name: 'bullet particles',
           geometryData,
-          size: 12,
-          alpha: .75,
+          size: 50,
+          alpha: .7,
           penumbra: .5,
           color: 0x44ffcc,
         }
@@ -629,10 +678,10 @@
           bulletParticles = geometry
         })
 
-        var iPc  = 1e3
-        var iPv  = 100
+        var iPc  = 2500
+        var iPv  = 200
         var geometryData = Array(iPc).fill().map(v=>{
-          var vel = Rn() * .5 * iPv + iPv * .5
+          var vel = Rn() * 0 * iPv + iPv * 1
           var p, q, d
           var vx = S(p=Math.PI*2*Rn()) *
                        S(q=Rn() < .5 ? Math.PI/2*Rn()**.5 : Math.PI - Math.PI/2*Rn()**.5)* vel
@@ -646,7 +695,7 @@
           name: 'splosion particles',
           geometryData,
           x: 0, y: 0, z: 0,
-          size: 24,
+          size: 75,
           alpha: .75,
           penumbra: .5,
           color: 0xffaa22,
@@ -656,7 +705,7 @@
         })
         
         var iPc  = 500
-        var iPv  = 50
+        var iPv  = 75
         var geometryData = Array(iPc).fill().map(v=>{
           var vel = Rn() * .2 * iPv + iPv * .8
           var p, q, d
@@ -683,18 +732,19 @@
 
         Coordinates.LoadFPSControls(renderer, {
           mSpeed: 500,
-          flyMode: false,
-          //crosshairMap: 'https://boss.mindhackers.org/assets/uploads/1rvQ0b.webp',
+          flyMode: true,
+          //crosshairMap: 'https://bosstools.mooo.com/assets/uploads/1rvQ0b.webp',
           crosshairSel: 2,
           crosshairSize: .5
         })
-
+        
         window.onkeydown = e => {
           if(document.activeElement.nodeName == 'CANVAS'){
+            if(!playerData.al) respawn()
             if(e.keyCode == 77){
               showMenu = !showMenu
             }
-            if(e.keyCode == 70){
+            if(e.keyCode == 70 && playerData.al){
               renderer.flyMode = !renderer.flyMode
             }
           }
@@ -722,8 +772,8 @@
         var pt = Coordinates.GetShaderCoord(0,0,0, shape, renderer)
         var rad = 50
         ctx.lineJoin = ctx.lineCap = 'round'
-        ctx.strokeStyle = '#f00'
-        ctx.fillStyle = '#f022'
+        ctx.strokeStyle = shape.al ? '#6fc' : '#f20'
+        ctx.fillStyle = shape.al ? '#6fc2' : '#f202'
         ctx.beginPath()
         ctx.arc(pt[0], pt[1],rad,0,7)
         strokeCustom(true)
@@ -755,20 +805,20 @@
         ly = pt[1]+ly/d*rad*2.2
         ctx.lineWidth = 6
         ctx.globalAlpha = 1
-        ctx.fillStyle = '#6fc'
+        ctx.fillStyle = shape.al ? '6fc' : '#f20'
         ctx.strokeStyle = '#000d'
         ctx.strokeText(shape.name, lx, ly-fs/3)
         ctx.fillText(shape.name, lx, ly-fs/3)
 
-        ctx.strokeText('health ' + (shape.health * 100 | 0), lx, ly-fs/3 + fs)
-        ctx.fillText('health ' + (shape.health * 100 | 0), lx, ly-fs/3 + fs)
+        ctx.strokeText('health ' + (shape.hl * 100 | 0), lx, ly-fs/3 + fs)
+        ctx.fillText('health ' + (shape.hl * 100 | 0), lx, ly-fs/3 + fs)
       }
       
       const spawnSplosion = (x, y, z, vx, vy, vz) => {
         spawnSparks(x, y, z)
         var fl = floor(x, z)
         if(Math.abs(y - fl < 20)) y = fl - 55
-        spawnFlash(x, y, z, 5)
+        spawnFlash(x, y, z, 3)
         vx = (vx/3) //** 3 / 5
         vy = (vy/3) //** 3 / 5
         vz = (vz/3) //** 3 / 5
@@ -792,18 +842,20 @@
       }
       
       const fireMissile = player => {
-        if(renderer.t - player.missileShotTimer < missileShotTimerInterval) return
+        var actualPlayer = players.filter(v=>+v.id==+player.id)[0]
+        if(!player.al || 
+           renderer.t - actualPlayer.mST < mSTInterval) return
         var cont = true
-        if(player.id == playerData.id){
-          if(playerData.missileCount > 0){
-            playerData.missileCount--
+        if(+player.id == +playerData.id){
+          if(playerData.mCt > 0){
+            playerData.mCt--
           }else{
             cont = false
           }
         }
         if(!cont) return
         var x, y, z, roll, pitch, yaw
-        if(player.interpolated){
+        if(player.ip){
           player = player.player
           x      = -player.ix
           y      = player.iy
@@ -820,20 +872,20 @@
           yaw    = player.yaw
         }
         
-        player.missileShotTimer = renderer.t
+        actualPlayer.mST = renderer.t
         var p1 = yaw + Math.PI
         var p2 = -pitch + Math.PI / 2
         var vx = -S(p1) * S(p2) * missileSpeed
         var vy = C(p2) * missileSpeed
         var vz = -C(p1) * S(p2) * missileSpeed
-        player.missileAlt = !player.missileAlt
+        player.mA = !player.mA
         
-        var offset = Coordinates.R_pyr(35 * (player.missileAlt ? -1: 1), -10, 0, player)
+        var offset = Coordinates.R_pyr(350 * (player.mA ? -1: 1), -100, 0, player)
         if(+player.id != +playerData.id) spawnFlash(-x + offset[0],
                                                      y + offset[1],
                                                      -z + offset[2], .5)
         
-        offset = Coordinates.R_pyr(35 * (player.missileAlt ? -1: 1), 0, 0, player)
+        offset = Coordinates.R_pyr(350 * (player.mA ? -1: 1), 0, 0, player)
         
         
         missiles = [...missiles, {
@@ -845,12 +897,13 @@
           id: player.id,
           vx, vy, vz,
         }]
-        coms('sync.php', 'syncPlayers')
+        console.log('shooting missiles', actualPlayer)
+        if(+player.id == +playerData.id) coms('sync.php', 'syncPlayers')
       }
 
       const fireChainguns = player => {
         var x, y, z, roll, pitch, yaw
-        if(player.interpolated){
+        if(player.ip){
           player = player.player
           x      = -player.ix
           y      = player.iy
@@ -867,21 +920,23 @@
           yaw    = player.yaw
         }
         
-        if(renderer.t - player.chaingunShotTimer < chaingunShotTimerInterval) return
-        player.chaingunShotTimer = renderer.t
+        var actualPlayer = players.filter(v=>+v.id==+player.id)[0]
+        if(!player.al || 
+           renderer.t - actualPlayer.cST < cSTInterval) return
+        actualPlayer.cST = renderer.t
         var p1 = yaw + Math.PI
         var p2 = -pitch + Math.PI / 2
         var vx = -S(p1) * S(p2) * chaingunSpeed
         var vy = C(p2) * chaingunSpeed
         var vz = -C(p1) * S(p2) * chaingunSpeed
-        player.chaingunAlt = !player.chaingunAlt
+        player.cA = !player.cA
         
-        var offset = Coordinates.R_pyr(20 * (player.chaingunAlt ? -1: 1), -10, 0, player)
+        var offset = Coordinates.R_pyr(200 * (player.cA ? -1: 1), -100, 0, player)
         if(+player.id != +playerData.id) spawnFlash(-x + offset[0],
                                                      y + offset[1],
                                                     -z + offset[2], .25)
 
-        offset = Coordinates.R_pyr(20 * (player.chaingunAlt ? -1: 1), 0, 0, player)
+        offset = Coordinates.R_pyr(200 * (player.cA ? -1: 1), 0, 0, player)
         bullets = [...bullets, {
           x: -x + offset[0],
           y: y + offset[1],
@@ -894,7 +949,7 @@
         //coms('sync.php', 'syncPlayers')
       }
       
-      var iSmokev = 4
+      var iSmokev = 6
       const genSmoke = (x, y, z) => {
         var vx = (Rn()-.5) * iSmokev
         var vy = (Rn()-.5) * iSmokev
@@ -935,9 +990,10 @@
       
       const drawMenu = () => {
         if(!gameLoaded) return
-
         var c = Coordinates.Overlay.c
+
         if(showMenu){
+          
           ctx.beginPath()
           ctx.lineTo(c.width, c.height/2)
           ctx.lineTo(c.width / 2+100, c.height/2)
@@ -958,12 +1014,12 @@
           ctx.textAlign = 'left'
           ctx.font = (fs) + 'px verdana'
           ctx.fillStyle = '#fff'
-          ctx.fillText(playerData.missileCount, c.width/2 + 10, c.height - fs - c.height/16)
+          ctx.fillText(playerData.mCt, c.width/2 + 10, c.height - fs - c.height/16)
           ctx.fillText('[m] -> menu', c.width/2 + 10, c.height - fs)
 
           if(weaponIconAnimationsLoaded){
             var s = .25
-            var res = weaponIconAnimations[playerData.gunSel].resource
+            var res = weaponIconAnimations[playerData.gS].resource
             var w = res.videoWidth * s
             var h = res.videoHeight * s
             ctx.drawImage(res, c.width * .75 - w/2, c.height * .75 - h/2, w, h)
@@ -989,16 +1045,35 @@
           ctx.textAlign = 'left'
           ctx.font = (fs) + 'px verdana'
           ctx.fillStyle = '#fff'
-          ctx.fillText(playerData.missileCount, c.width/1.05 + 10, c.height - fs - c.height / 16)
+          ctx.fillText(playerData.mCt, c.width/1.05 + 10, c.height - fs - c.height / 16)
           ctx.fillText('[m]', c.width/1.05 + 10, c.height - fs)
 
           if(weaponIconAnimationsLoaded){
             var s = .1
-            var res = weaponIconAnimations[playerData.gunSel].resource
+            var res = weaponIconAnimations[playerData.gS].resource
             var w = res.videoWidth * s
             var h = res.videoHeight * s
             ctx.drawImage(res, c.width * .975 - w/2, c.height * .75 - h/2, w, h)
           }
+        }
+        
+        if(playerData.al){
+          if(playerData.dm > .02){
+            console.log(playerData.dm)
+            ctx.globalAlpha = playerData.dm
+            ctx.drawImage(dmOverlay, 0, 0, c.width, c.height)
+            ctx.globalAlpha = 1
+          }else{
+            playerData.dm = 0
+          }
+          playerData.dm = Math.max(0, playerData.dm /= 1.02)
+        }else{
+          ctx.globalAlpha = playerData.dm = 1
+          scratchCanvas.Draw(skullShape)
+          ctx.drawImage(scratchCanvas.c, 0,0, c.width, c.height)
+          ctx.drawImage(dmDeadOverlay, 0, 0, c.width, c.height)
+          scratchCanvas.z = 32
+          skullShape.yaw += .02
         }
       }
 
@@ -1007,25 +1082,25 @@
         var t = renderer.t
         gameSync()
         
-        playerData.firingMissiles  = false
-        playerData.firingChainguns = false
+        playerData.fM = false
+        playerData.fC = false
         
-        playerData.gunSel = playerData.missileCount > 0 ? 0 : 1
+        playerData.gS = playerData.mCt > 0 ? 0 : 1
         
         if(document.activeElement.nodeName == 'CANVAS'){
           if(renderer.mouseButton == -1){
-            playerData.firingMissiles = false
-            playerData.firingChainguns = false
+            playerData.fM = false
+            playerData.fC = false
           }
           if(!renderer.flyMode && renderer.mouseButton == 1) {
-            switch(playerData.gunSel){
+            switch(playerData.gS){
               case 0:
                 fireMissile(playerData)
-                playerData.firingMissiles = true
+                playerData.fM = playerData.mCt > 0
               break
               case 1:
                fireChainguns(playerData)
-                playerData.firingChainguns = true
+               playerData.fC = true
               break
             }
           }
@@ -1033,11 +1108,11 @@
             if(v) {
               switch(i){
                 case 90:
-                  playerData.firingMissiles = true
+                  playerData.fM = playerData.mCt > 0
                   fireMissile(playerData)
                 break
                 case 88:
-                  playerData.firingChainguns = true
+                  playerData.fC = true
                   fireChainguns(playerData)
                 break
               }
@@ -1052,6 +1127,7 @@
             playervy = 0
           }
         }else{
+          /*
           var pox = renderer.x
           var poy = renderer.y
           var poz = renderer.z
@@ -1069,7 +1145,10 @@
           playervx *= d2
           playervy *= d2
           playervz *= d2
+          */
+          
           playervy += grav
+          renderer.y += playervy
           if(renderer.y > fl - 20){
             renderer.y = fl
             playervy = 0
@@ -1078,6 +1157,7 @@
             renderer.hasTraction = false
           }
         }
+          
         
         if(typeof smokeParticles != 'undefined'){
           smoke = smoke.filter(smoke => renderer.t - smoke.t < smokeLife)
@@ -1100,7 +1180,11 @@
           medkitShape.x = ((i%mcl)-mcl/2 + .5) * msp
           medkitShape.z = ((i/mcl/mrw|0)-mbr/2 + .5) * msp
           medkitShape.y = 500 + floor(medkitShape.x, medkitShape.z) + (((i/mcl|0)%mrw)-mrw/2 + .5) * msp
-          await renderer.Draw(medkitShape)
+          if(Math.hypot(-playerData.x - medkitShape.x, 
+                         playerData.y - medkitShape.y, 
+                        -playerData.z - medkitShape.z) < 1e4){
+              await renderer.Draw(medkitShape)
+          }
         }
         
         
@@ -1117,16 +1201,16 @@
               var py = floor(px, pz) + 600
               var d = Math.hypot(-playerData.x - px, playerData.y - py, -playerData.z - pz)
               if(d < 2e4){
-                if(d < 1e3){
+                if(d < 2e3){
                   powerupAuras[o].nextRespawn = t + powerupRespawnSpeed
-                  playerData.missileCount += o+1
+                  playerData.mCt += o+1
                 }else{
                   for(var i = sd == 1 ? 2: sd; i--;){
                     if(sd == 1 && i) continue
                     powerup.x = 
-                      px + S(p=Math.PI*2/(sd==1?2:sd)*i + t*16 / (1+sd/2)) * 350
+                      px + S(p=Math.PI*2/(sd==1?2:sd)*i + t*16 / (1+sd/2)) * 2e3
                     powerup.y = py
-                    powerup.z = pz + C(p) * 350
+                    powerup.z = pz + C(p) * 2e3
                     await renderer.Draw(powerup)
                     
                     thrusterPowerupShape.x = powerup.x
@@ -1161,7 +1245,7 @@
                     pitch: shape.pitch,
                     yaw: shape.yaw,
                     name: player.name,
-                    health: player.health,
+                    hl: player.hl,
                   })
 
                   shape.x = player.ix
@@ -1171,17 +1255,19 @@
                   shape.pitch = player.ipitch
                   shape.yaw = player.iyaw
                   
-                  if(player.firingMissiles) fireMissile({
-                    interpolated: true,
+                  if(player.fM) fireMissile({
+                    id: player.id,
+                    ip: true,
                     player,
                   })
 
-                  if(player.firingChainguns) fireChainguns({
-                    interpolated: true,
+                  if(player.fC) fireChainguns({
+                    id: player.id,
+                    ip: true,
                     player,
                   })
 
-                  if(typeof gunShape != 'undefined' && player.hasMissiles){
+                  if(typeof gunShape != 'undefined' && player.hM){
                     gunShape.x = shape.x
                     gunShape.y = shape.y
                     gunShape.z = shape.z
@@ -1192,7 +1278,7 @@
                   }
                   await renderer.Draw(shape)
 
-                  if(typeof chaingunShape != 'undefined' && player.hasChainguns){
+                  if(typeof chaingunShape != 'undefined' && player.hC){
                     chaingunShape.x = shape.x
                     chaingunShape.y = shape.y
                     chaingunShape.z = shape.z
@@ -1291,9 +1377,9 @@
               var fl = floor(l[0] + splosion.x + l[3], l[2] + splosion.z + l[5])
               if(l[1] + splosion.y + l[4]< fl - 55) {
                 l[1] =  fl - 55 - splosion.y
-                l[3] /= 1.5
+                l[3] /= 1.25
                 l[4] = Math.abs(l[4]) / 2.5
-                l[5] /= 1.5
+                l[5] /= 1.25
               }
               splosionShape.vertices[j+0] = l[0] += l[3]
               splosionShape.vertices[j+1] = (l[1] += l[4] -= grav / 10)
@@ -1316,9 +1402,9 @@
               var fl = floor(l[0] + sparks.x + l[3], l[2] + sparks.z + l[5])
               if(l[1] + sparks.y + l[4]< fl - 55) {
                 l[1] =  fl - 55 - sparks.y
-                l[3] /= 1.5
-                l[4] = Math.abs(l[4]) / 1.5
-                l[5] /= 1.5
+                l[3] /= 1.25
+                l[4] = Math.abs(l[4]) / 2.5
+                l[5] /= 1.25
               }
               sparksShape.vertices[j+0] = l[0] += l[3]
               sparksShape.vertices[j+1] = (l[1] += l[4] -= grav / 10)
@@ -1390,7 +1476,16 @@
                 spawnSplosion(missile.x, missile.y, missile.z,
                               missile.vx, missile.vy, missile.vz)
                 if(+players[midx].id == +playerData.id){
-                  playerData.health -= missileDamage
+                  playerData.hl -= missileDamage
+                  if(playerData.hl <= 0){
+                    playerData.hl = 0
+                    playerData.dm = 1
+                    playerData.al = false
+                    renderer.useKeys = false
+                    spawnSplosion(playerData.x, playerData.y, playerData.z, 0, 0, 0)
+                  }else{
+                    playerData.dm += missileDamage * 4
+                  }
                 }
               }
             }
@@ -1437,7 +1532,16 @@
                   bullet.t = -chaingunLife
                   if(Rn() < .5) spawnSparks(bullet.x, bullet.y, bullet.z)
                   if(+player.id == +playerData.id){
-                    playerData.health -= chaingunDamage
+                    playerData.hl -= chaingunDamage
+                    if(playerData.hl <= 0){
+                      playerData.hl = 0
+                      playerData.dm = 1
+                      playerData.al = false
+                      renderer.useKeys = false
+                      spawnSplosion(playerData.x, playerData.y, playerData.z, 0, 0, 0)
+                    }else{
+                      playerData.dm += chaingunDamage * 8
+                    }
                   }
                 }
               }
@@ -1506,13 +1610,21 @@
       launch(renderer.width, renderer.height)
 
       // db sync
-      const URLbase = 'https://boss.mindhackers.org/flock'
+      const URLbase = 'https://bosstools.mooo.com/flock'
       
       const syncPlayers = data => {
+        var tPlayers = structuredClone(players)
         players = data.map(player => {
           player = JSON.parse(player)
           player.id = +player.id
           return player
+        })
+        tPlayers.map(v=>{
+          var tp = players.filter(q=>+q.id == +v.id)
+          if(tp.length) {
+            tp[0].mST = v.mST
+            tp[0].cST = v.cST
+          }
         })
         if(!players.filter(v=>+v.id==+playerData.id).length){
           reconnectionAttempts++
@@ -1531,11 +1643,15 @@
               //l[0].name  = player.name
               //l[0].id    = player.id
               var v = l[0]
-              v.hasMissiles     = player.hasMissiles
-              v.hasChainguns    = player.hasChainguns
-              v.firingMissiles  = player.firingMissiles
-              v.firingChainguns = player.firingChainguns
-              v.health          = player.health
+              v.al              = player.al
+              v.dm              = player.dm
+              v.hM              = player.hM
+              v.hC              = player.hC
+              v.mST             = player.mST
+              v.cST             = player.cST
+              v.fM              = player.fM
+              v.fC              = player.fC
+              v.hl              = player.hl
               v.name            = player.name
               v.x               = player.x
               v.y               = player.y
@@ -1553,14 +1669,16 @@
                 iroll: 0, ipitch: 0, iyaw: 0,
                 keep: true,
               }
-              newObj.missileAlt        = false
-              newObj.chaingunAlt       = false
-              newObj.hasMissiles       = player.hasMissiles
-              newObj.hasChainguns      = player.hasChainguns
-              newObj.missileShotTimer  = player.missileShotTimer
-              newObj.chaingunShotTimer = player.chaingunShotTimer
-              newObj.firingMissiles    = player.firingMissiles
-              newObj.health            = player.health
+              newObj.mA                = false
+              newObj.cA                = false
+              newObj.dm                = player.dm
+              newObj.al                = player.al
+              newObj.hM                = player.hM
+              newObj.hC                = player.hC
+              newObj.mST               = player.mST
+              newObj.cST               = player.cST
+              newObj.fM                = player.fM
+              newObj.hl                = player.hl
               newObj.name              = player.name
               newObj.id                = +player.id
               newObj.x                 = newObj.ix     = player.x
@@ -1612,6 +1730,12 @@
       }
     
       const coms = (target, callback='') => {
+        playerData.x = Math.round(playerData.x*1e3) / 1e3
+        playerData.y = Math.round(playerData.y*1e3) / 1e3
+        playerData.z = Math.round(playerData.z*1e3) / 1e3
+        playerData.roll = Math.round(playerData.roll*1e3) / 1e3
+        playerData.pitch = Math.round(playerData.pitch*1e3) / 1e3
+        playerData.yaw = Math.round(playerData.yaw*1e3) / 1e3
         let sendData = { playerData }
         var url = URLbase + '/' + target
         fetch(url, {
@@ -1647,19 +1771,30 @@
       renderer.pitch = (Rn() - .5) * Math.PI/3
 
       // network payload (tranceived properties)
-      var playerData = {
-        name: '', id: -1,
-        health: 1,
-        x: renderer.x,
-        y: renderer.y,
-        z: renderer.z,
-        gunSel: 0, missileCount: 0,
-        roll: 0, pitch: 0, yaw: 0,
-        hasMissiles: true,
-        hasChainguns: true,
-        firingMissiles: false,
-        interpolated: false,
+
+      const respawn = () => {
+        renderer.useKeys = true
+        ls = Rn()**.5*1e5
+        var x = S(p=Math.PI*Rn()*2) * ls
+        var z = C(p) * ls
+        playerData = {
+          name: '', id: -1,
+          hl: 1, al: true,
+          y: floor(x, z) + 500,
+          gS: 0, mCt: 0,
+          roll: 0, pitch: 0, yaw: 0,
+          mST: 0, cST: 0,
+          hM: true,
+          hC: true,
+          fM: false,
+          fC: false,
+          ip: false,
+          dm: 0,
+        }
       }
+
+      var playerData
+      respawn()
 
       coms('launch.php', 'launchLocalClient')
     </script>
