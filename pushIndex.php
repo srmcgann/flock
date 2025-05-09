@@ -1,5 +1,5 @@
 <?
-$file = <<<FILE
+$file = <<<'FILE'
 <!DOCTYPE html>
 <html>
   <head>
@@ -105,7 +105,7 @@ $file = <<<FILE
         return  -d
         */
         
-        return  Math.min(1.125, Math.max(0,C(X/2e4) + C(Z/2e4))) * 1e4
+        return  Math.min(1.125, Math.max(0,C(X/Math.PI/5e3) + C(Z/Math.PI/5e3))) * 1e4
       }
 
       var X, Y, Z
@@ -117,6 +117,11 @@ $file = <<<FILE
       var fbr = 4 * 25
       var sp = 80
       var fsp = 20
+      var mcl = 2
+      var mrw = 1
+      var mbr = 2
+      var msp = 1e5 / 1.5
+      var medkits = Array(mcl*mrw*mbr).fill().map(v=>({visible: true, t: 0}))
       var tx, ty, tz
       var ls = 2**.5 / 2 * sp, p, a
       var fls = 2**.5 / 2 * fsp, p, a
@@ -145,9 +150,10 @@ $file = <<<FILE
       var chaingunSpeed            = 1e3
       var chaingunLife             = 6
       var smokeLife                = 5
-      var missilePowerupShape, powerupAuras, powerupRespawnSpeed = 60
+      var missilePowerupShape, powerupAuras
+      var powerupRespawnSpeed = 80
+      var medkitRespawnSpeed = 50
       var maxPlayerVel = 200
-      
 
       var refTexture = './pseudoEquirectangular_3.jpg'
       var heightMap = 'https://srmcgann.github.io/Coordinates/resources/bumpmap_equirectangular_po2.jpg'
@@ -155,6 +161,9 @@ $file = <<<FILE
       
       var dmOverlay = new Image()
       dmOverlay.src = './damage.png'
+
+      var medkitGraphic = new Image()
+      medkitGraphic.src = 'medkit_lowres.png'
 
       var dmDeadOverlay = new Image()
       dmDeadOverlay.src = './damage_dead.png'
@@ -382,9 +391,9 @@ $file = <<<FILE
 
         var geoOptions = {
           shapeType: 'sprite',
-          map: 'medkit_lowres.png?2',
+          map: 'medkit_lowres.png',
           name: 'medkit',
-          size: 20,
+          size: 36,
         }
         if(1){
           await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
@@ -633,7 +642,7 @@ $file = <<<FILE
           isParticle: true,
           size: 600,
           //geometryData,
-          color: 0xffcc44,
+          color: 0x00ff66,
           alpha: .3,
           penumbra: .25,
           scaleX: 20,
@@ -746,7 +755,7 @@ $file = <<<FILE
 
         Coordinates.LoadFPSControls(renderer, {
           mSpeed: 500,
-          flyMode: true,
+          flyMode: false,
           crosshairSel: 2,
           crosshairSize: .5
         })
@@ -785,8 +794,8 @@ $file = <<<FILE
         var pt = Coordinates.GetShaderCoord(0,0,0, shape, renderer)
         var rad = 50
         ctx.lineJoin = ctx.lineCap = 'round'
-        ctx.strokeStyle = shape.al ? '#6fc' : '#f20'
-        ctx.fillStyle = shape.al ? '#6fc2' : '#f202'
+        ctx.strokeStyle = shape.al ? `hsla(${shape.hl*200},99%,50%,1)` : '#f20'
+        ctx.fillStyle = shape.al ? `hsla(${shape.hl*200},99%,50%,.125)` : '#f202'
         ctx.beginPath()
         ctx.arc(pt[0], pt[1],rad,0,7)
         strokeCustom(true)
@@ -818,6 +827,7 @@ $file = <<<FILE
         ly = pt[1]+ly/d*rad*2.2
         ctx.lineWidth = 6
         ctx.globalAlpha = 1
+        ctx.fillStyle = shape.al ? `hsla(${shape.hl*200},99%,50%,1)` : '#f20'
         ctx.fillStyle = shape.al ? '6fc' : '#f20'
         ctx.strokeStyle = '#000d'
         ctx.strokeText(shape.name, lx, ly-fs/3)
@@ -1045,8 +1055,17 @@ $file = <<<FILE
           ctx.textAlign = 'left'
           ctx.font = (fs) + 'px verdana'
           ctx.fillStyle = '#fff'
-          ctx.fillText(playerData.mCt, c.width/2 + 10, c.height - fs - c.height/16)
-          ctx.fillText('[m] -> menu', c.width/2 + 10, c.height - fs)
+          ctx.textAlign = 'center'
+          ctx.fillText(playerData.gS ? '∞' : playerData.mCt, c.width * .75, c.height - (playerData.gS ? c.height / 6: 0))
+          ctx.textAlign = 'left'
+
+
+          ctx.drawImage(medkitGraphic, c.width/1.05 + 15, c.height - fs * 2 - 32, 20, 20)
+          ctx.font = (fs/1.5) + 'px verdana'
+          ctx.fillText(Math.round(playerData.hl*100) + '%', c.width/1.05 + 10, c.height - fs / 1.5 - 20)
+
+          ctx.fillStyle = '#82f'
+          ctx.fillText('[m] -> menu', c.width/2 + 10, c.height - fs / 1.5)
 
           if(weaponIconAnimationsLoaded){
             var s = .25
@@ -1073,18 +1092,27 @@ $file = <<<FILE
           ctx.fill()
           
           var fs = 16
-          ctx.textAlign = 'left'
+          ctx.textAlign = 'center'
           ctx.font = (fs) + 'px verdana'
           ctx.fillStyle = '#fff'
-          ctx.fillText(playerData.mCt, c.width/1.05 + 10, c.height - fs - c.height / 16)
-          ctx.fillText('[m]', c.width/1.05 + 10, c.height - fs)
+          ctx.fillText(playerData.gS ? '∞' : playerData.mCt, c.width/1.05 + 24,
+                       c.height - fs * 2.5 - (playerData.gS ? c.height / 10 : c.height / 16))
+          ctx.textAlign = 'left'
+
+
+          ctx.drawImage(medkitGraphic, c.width/1.05 + 15, c.height - fs * 2 - 32, 20, 20)
+          ctx.font = (fs/1.5) + 'px verdana'
+          ctx.fillText(Math.round(playerData.hl*100) + '%', c.width/1.05 + 10, c.height - fs / 1.5 - 20)
+          
+          ctx.fillStyle = '#82f'
+          ctx.fillText('[m]', c.width/1.05 + 10, c.height - fs / 1.5)
 
           if(weaponIconAnimationsLoaded){
-            var s = .1
+            var s = playerData.gS ? .2 : .1
             var res = weaponIconAnimations[playerData.gS].resource
             var w = res.videoWidth * s
             var h = res.videoHeight * s
-            ctx.drawImage(res, c.width * .975 - w/2, c.height * .75 - h/2, w, h)
+            ctx.drawImage(res, c.width * .9775 - w/2, c.height * .75 - h/2, w, h)
           }
         }
         
@@ -1187,8 +1215,7 @@ $file = <<<FILE
             renderer.hasTraction = false
           }
         }
-          
-        
+
         if(typeof smokeParticles != 'undefined'){
           smoke = smoke.filter(smoke => renderer.t - smoke.t < smokeLife)
           var l = smokeParticles.vertices
@@ -1202,22 +1229,38 @@ $file = <<<FILE
           await renderer.Draw(smokeParticles)
         }
         
-        var mcl = 3
-        var mrw = 1
-        var mbr = 3
-        var msp = 1e5
-        for(var i = 0; i<mcl*mrw*mbr; i++){
-          medkitShape.x = ((i%mcl)-mcl/2 + .5) * msp
-          medkitShape.z = ((i/mcl/mrw|0)-mbr/2 + .5) * msp
-          medkitShape.y = 500 + floor(medkitShape.x, medkitShape.z) + (((i/mcl|0)%mrw)-mrw/2 + .5) * msp
-          if(Math.hypot(-playerData.x - medkitShape.x, 
-                         playerData.y - medkitShape.y, 
-                        -playerData.z - medkitShape.z) < 1e4){
+        for(var i = 0; i<medkits.length; i++){
+          if(medkits[i].visible || t - medkits[i].t > medkitRespawnSpeed){
+            if(t - medkits[i].t > medkitRespawnSpeed) medkits[i].visible = true
+            ax = ay = az = nax = nay = naz = 0            
+            var ax = medkitShape.x = ((i%mcl)-mcl/2 + .5) * msp
+            var az = medkitShape.z = ((i/mcl/mrw|0)-mbr/2 + .5) * msp
+            
+            var migx = 1e5
+            var migz = 1e5
+            while(ax + nax + renderer.x > migx) nax -= migx*2
+            while(ax + nax + renderer.x < -migx) nax += migx*2
+            while(az + naz + renderer.z > migz) naz -= migz*2
+            while(az + naz + renderer.z < -migz) naz += migz*2
+
+            medkitShape.x += nax
+            medkitShape.z += naz
+            medkitShape.y = 500 + floor(medkitShape.x, medkitShape.z) + (((i/mcl|0)%mrw)-mrw/2 + .5) * msp
+            var d = Math.hypot(-playerData.x - medkitShape.x, 
+                           playerData.y - medkitShape.y, 
+                          -playerData.z - medkitShape.z)
+            if(d < 1e5){
+              if(d < 2e3){
+                playerData.hl = 1
+                medkits[i].visible = false
+                medkits[i].t = t
+              }
               await renderer.Draw(medkitShape)
+            }
           }
         }
-        
-        
+
+
         var powerup = missilePowerupShape
         powerup.yaw -= .1
         
@@ -1276,6 +1319,7 @@ $file = <<<FILE
                     yaw: shape.yaw,
                     name: player.name,
                     hl: player.hl,
+                    al: player.al,
                   })
 
                   shape.x = player.ix
@@ -1625,7 +1669,7 @@ $file = <<<FILE
           floorParticles.vertices[i+0] += nax
           floorParticles.vertices[i+2] += naz
           floorParticles.vertices[i+1] = floor(floorParticles.vertices[i+0],
-                                      floorParticles.vertices[i+2]) - ( d ? 1e6:300)
+                                      floorParticles.vertices[i+2]) - ( d ? 1e6:1e3)
         }
         await renderer.Draw(floorParticles)
 
@@ -1870,6 +1914,7 @@ $file = <<<FILE
     </script>
   </body>
 </html>
+
 
 FILE;
 file_put_contents('../../flock/index.php', $file);
