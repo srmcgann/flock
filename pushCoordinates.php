@@ -1323,6 +1323,7 @@ const LoadGeometry = async (renderer, geoOptions) => {
      (sphereize || scaleX != 1 || scaleY != 1 || scaleZ != 1)){
     var ip1 = sphereize
     var ip2 = 1 -sphereize
+    var sz = isParticle ? 1 : size
     for(var i = 0; i< vertices.length; i+=3){
       var d, val
     
@@ -1336,9 +1337,9 @@ const LoadGeometry = async (renderer, geoOptions) => {
       X *= ip1 + d*ip2
       Y *= ip1 + d*ip2
       Z *= ip1 + d*ip2
-      vertices[i+0] = X * size * scaleX
-      vertices[i+1] = Y * size * scaleY
-      vertices[i+2] = Z * size * scaleZ
+      vertices[i+0] = X * sz * scaleX
+      vertices[i+1] = Y * sz * scaleY
+      vertices[i+2] = Z * sz * scaleZ
       
       var ox = normals[i*2+0]
       var oy = normals[i*2+1]
@@ -2811,7 +2812,7 @@ const BasicShader = async (renderer, options=[]) => {
 
           float mag = pointLightPos[i].w;
           ret = mag / (1.0 + pow(1.0 + sqrt((lpos.x-fPos.x) * (lpos.x-fPos.x) + (lpos.y-fPos.y) * (lpos.y-fPos.y) +
-          + (lpos.z-fPos.z) * (lpos.z-fPos.z)), 2.0) / 3.0) * 40.0;
+          + (lpos.z-fPos.z) * (lpos.z-fPos.z)), 2.0) / 3.0) * 20.0;
           
           rgba.r += ret * pointLightCol[i].r;
           rgba.g += ret * pointLightCol[i].g;
@@ -5391,6 +5392,7 @@ export {
   Overlay,
   GenHash,
 }
+
 
 FILE;
 file_put_contents('../../flock/coordinates.js', $file);

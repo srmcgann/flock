@@ -93,20 +93,29 @@ $file = <<<FILE
     
       const floor = (X, Z) => {
         //return Math.min(8, Math.max(-.25, (S(X/2e3+renderer.t/8) * S(Z/2e3) + S(X/2500) * S(Z/2500+renderer.t * 3 / 8)) ** 3)) * 2e3
+        
+        /*
+        var d = Math.hypot(X, Z) 
+        var p = Math.atan2(X, Z) + renderer.t / 4
+        return  Math.min(.66, Math.max(-.25, C(d/1e3+S(p*3)))) * 1e4
+        */
 
-        return Math.min(1, Math.max(-.5, (S(X/5e3) * S(Z/5e3) + S(X/1e4) * S(Z/1e4)) ** 3)) * 5e3
-
-        //return Math.min(4, Math.max(-.5, (S(X/1e3+renderer.t/4) * S(Z/1e3) + S(X/2500) * S(Z/2500+renderer.t*3/4)) ** 3)) * 1e3
+        /*
+        var d = Math.hypot(X, Z) 
+        return  -d
+        */
+        
+        return  Math.min(1.125, Math.max(0,C(X/2e4) + C(Z/2e4))) * 1e4
       }
 
       var X, Y, Z
       var cl = 10
       var rw = 1
       var br = 10
-      var sp = 160
       var fcl = 4 * 25
       var frw = 1
       var fbr = 4 * 25
+      var sp = 80
       var fsp = 20
       var tx, ty, tz
       var ls = 2**.5 / 2 * sp, p, a
@@ -128,15 +137,15 @@ $file = <<<FILE
       var smokeParticles
       var showMenu                 = false
       var mST                      = 0
-      var mSTInterval              = .2
-      var missileSpeed             = 300
+      var mSTInterval              = .3
+      var missileSpeed             = 500
       var missileLife              = 6
       var cST                      = 0
       var cSTInterval              = .01
-      var chaingunSpeed            = 400
-      var chaingunLife             = 8
-      var smokeLife                = 6
-      var missilePowerupShape, powerupAuras, powerupRespawnSpeed = 10
+      var chaingunSpeed            = 1e3
+      var chaingunLife             = 6
+      var smokeLife                = 5
+      var missilePowerupShape, powerupAuras, powerupRespawnSpeed = 60
       var maxPlayerVel = 200
       
 
@@ -178,7 +187,7 @@ $file = <<<FILE
       renderer.c.onmousedown = e => {
         if(document.activeElement.nodeName == 'CANVAS' && (!renderer.flyMode &&
            renderer.hasTraction) && e.button == 2){
-          playervy -= 600
+          playervy -= 1e3
         }
       }
 
@@ -552,7 +561,6 @@ $file = <<<FILE
           await backgroundShader.ConnectGeometry(geometry)
         }) 
 
-        
         geometryData = Array(cl*rw*br).fill().map((v, i) => {
           tx = ((i%cl) - cl/2 + .5) * sp
           ty = 0
@@ -619,20 +627,22 @@ $file = <<<FILE
         var geoOptions = {
           shapeType: 'custom shape',
           //shapeType: 'particles',
-          url: './floorGrid.json?3',
+          url: './floorGrid.json?2',
           name: 'floor particles',
+          involveCache: false,
           isParticle: true,
-          size: 75,
+          size: 600,
           //geometryData,
-          color: 0x4400ff,
-          alpha: .75,
-          penumbra: .2,
+          color: 0xffcc44,
+          alpha: .3,
+          penumbra: .25,
+          scaleX: 20,
+          scaleZ: 20,
           //exportShape: true
         }
         if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           floorParticles = geometry
         })
-
         
         var geoOptions = {
           shapeType: 'point light',
@@ -640,7 +650,7 @@ $file = <<<FILE
           showSource: false,
           map: 'https://srmcgann.github.io/Coordinates/resources/stars/star0.png',
           size: 25,
-          lum: 1e4,
+          lum: 2e4,
           color: 0xffffff,
         }
         if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
@@ -648,7 +658,7 @@ $file = <<<FILE
         })  
 
         var iPc = 1e3
-        var G   = cl * sp * mag * 2
+        var G   = cl * sp * mag * 8
         var geometryData = Array(iPc).fill().map(v=>{
           X = (Rn()-.5) * G
           Y = (Rn()-.5) * G
@@ -659,7 +669,7 @@ $file = <<<FILE
           shapeType: 'particles',
           name: 'particles',
           geometryData,
-          size: 200,
+          size: 400,
           alpha: .3,
           penumbra: .3,
           color: 0xffffff,
@@ -689,7 +699,7 @@ $file = <<<FILE
           var p, q, d
           var vx = S(p=Math.PI*2*Rn()) *
                        S(q=Rn() < .5 ? Math.PI/2*Rn()**.5 : Math.PI - Math.PI/2*Rn()**.5)* vel
-          var vy = C(q) * vel * 1.25
+          var vy = C(q) * vel
           var vz = C(p) * S(q) * vel
           baseSplosion = [...baseSplosion, [vx, vy, vz, vx, vy, vz]]
           return [vx, vy, vz]
@@ -715,7 +725,7 @@ $file = <<<FILE
           var p, q, d
           var vx = S(p=Math.PI*2*Rn()) *
                        S(q=Rn() < .5 ? Math.PI/2*Rn()**.5 : Math.PI - Math.PI/2*Rn()**.5)* vel
-          var vy = C(q) * vel * 1.25
+          var vy = C(q) * vel
           var vz = C(p) * S(q) * vel
           baseSparks = [...baseSparks, [vx, vy, vz, vx, vy, vz]]
           return [vx, vy, vz]
@@ -845,8 +855,17 @@ $file = <<<FILE
       }
       
       const fireMissile = player => {
-        var actualPlayer = players.filter(v=>+v.id==+player.id)[0]
-        if(!player.al || 
+        var actualPlayer = players.filter(v=>+v.id==+player.id)
+        if(actualPlayer.length){
+          actualPlayer = actualPlayer[0]
+        } else {
+          if(player.id == playerData.id) {
+            actualPlayer = playerData
+          } else {
+            return
+          }
+        }
+        if(!actualPlayer.al || 
            renderer.t - actualPlayer.mST < mSTInterval) return
         var cont = true
         if(+player.id == +playerData.id){
@@ -923,7 +942,16 @@ $file = <<<FILE
           yaw    = player.yaw
         }
         
-        var actualPlayer = players.filter(v=>+v.id==+player.id)[0]
+        var actualPlayer = players.filter(v=>+v.id==+player.id)
+        if(actualPlayer.length){
+          actualPlayer = actualPlayer[0]
+        } else {
+          if(player.id == playerData.id) {
+            actualPlayer = playerData
+          } else {
+            return
+          }
+        }
         if(!player.al || 
            renderer.t - actualPlayer.cST < cSTInterval) return
         actualPlayer.cST = renderer.t
@@ -1062,7 +1090,6 @@ $file = <<<FILE
         
         if(playerData.al){
           if(playerData.dm > .02){
-            console.log(playerData.dm)
             ctx.globalAlpha = playerData.dm
             ctx.drawImage(dmOverlay, 0, 0, c.width, c.height)
             ctx.globalAlpha = 1
@@ -1098,12 +1125,12 @@ $file = <<<FILE
           if(!renderer.flyMode && renderer.mouseButton == 1) {
             switch(playerData.gS){
               case 0:
-                fireMissile(playerData)
                 playerData.fM = playerData.mCt > 0
+                fireMissile(playerData)
               break
               case 1:
-               fireChainguns(playerData)
                playerData.fC = true
+               fireChainguns(playerData)
               break
             }
           }
@@ -1199,8 +1226,8 @@ $file = <<<FILE
           for(var o = 0; o<6;o++){
             if(powerupAuras[o].nextRespawn <= t){
               var sd = o + 1
-              var px = S(p=Math.PI*2/6*o + t/6) * 15500 * 4
-              var pz = C(p) * 15500 * 4
+              var px = S(p=Math.PI*2/6*o + t/6) * 15500 * 4 + weaponsTrackShape.x
+              var pz = C(p) * 15500 * 4 + weaponsTrackShape.z
               var py = floor(px, pz) + 600
               var d = Math.hypot(-playerData.x - px, playerData.y - py, -playerData.z - pz)
               if(d < 2e4){
@@ -1300,12 +1327,15 @@ $file = <<<FILE
                 ay = shape.vertices[i+1]
                 az = shape.vertices[i+2]
                 
-                if(ax + renderer.x > cl/1*sp*mag) nax -= cl*sp*2*mag
-                if(ax + renderer.x < -cl/1*sp*mag) nax += cl*sp*2*mag
-                if(ay + renderer.y > br/1*sp*mag) nay -= br*sp*2*mag
-                if(ay + renderer.y < -br/1*sp*mag) nay += br*sp*2*mag
-                if(az + renderer.z > br/1*sp*mag) naz -= br*sp*2*mag
-                if(az + renderer.z < -br/1*sp*mag) naz += br*sp*2*mag
+                var migx = cl*sp*mag*4
+                var migy = br*sp*mag*4 //rw*sp*mag*8
+                var migz = br*sp*mag*4
+                while(ax + nax + renderer.x > migx) nax -= migx * 2
+                while(ax + nax + renderer.x < -migx) nax += migx * 2
+                while(ay + nay + renderer.y > migy) nay -= migy * 2
+                while(ay + nay + renderer.y < -migy) nay += migy * 2
+                while(az + naz + renderer.z > migz) naz -= migz * 2
+                while(az + naz + renderer.z < -migz) naz += migz * 2
 
                 shape.vertices[i+0] += nax
                 shape.vertices[i+1] += nay
@@ -1314,9 +1344,9 @@ $file = <<<FILE
               await renderer.Draw(shape)
             break
             case 'point light':
-              //shape.x = renderer.x
-              //shape.z = renderer.z
-              shape.y = floor(shape.x, shape.z) + 500 //- floor(shape.x, shape.z) + 450
+              shape.x = 0
+              shape.z = 0
+              shape.y = 1e3
               await renderer.Draw(shape)
             break
             case 'background':
@@ -1338,20 +1368,21 @@ $file = <<<FILE
                 //ay /= 3
                 az /= 3
                 
-                if(ax + renderer.x > cl/1*sp*mag) nax -= cl*sp*2*mag
-                if(ax + renderer.x < -cl/1*sp*mag) nax += cl*sp*2*mag
-                if(az + renderer.z > br/1*sp*mag) naz -= br*sp*2*mag
-                if(az + renderer.z < -br/1*sp*mag) naz += br*sp*2*mag
+                var migx = cl*sp*mag * 1
+                var migz = br*sp*mag * 1
+                while(ax + nax + renderer.x > migx) nax -= migx*2
+                while(ax + nax + renderer.x < -migx) nax += migx*2
+                while(az + naz + renderer.z > migz) naz -= migz*2
+                while(az + naz + renderer.z < -migz) naz += migz*2
                 
                 for(var m = 3; m--;){
                   shape.vertices[i+m*3+0] += nax
                   shape.vertices[i+m*3+2] += naz
                   shape.vertices[i+m*3+1] = floor(shape.vertices[i+m*3+0],
-                                              shape.vertices[i+m*3+2]) - 4e3
+                                              shape.vertices[i+m*3+2]) - 2e3
                 }
               }
               //if(!((t*60|0)%240) || (t<.1)) Coordinates.SyncNormals(shape, true)
-                console.log(shape)
               await renderer.Draw(shape)
             break
             default:
@@ -1359,9 +1390,22 @@ $file = <<<FILE
           }
         })
         
+        var ax = ay = az = nax = nay = naz = 0
+        var ax = weaponsTrackShape.x
+        var az = weaponsTrackShape.z
+        
+        var migx = 1e5
+        var migz = 1e5
+        while(ax + nax + renderer.x > migx) nax -= migx*2
+        while(ax + nax + renderer.x < -migx) nax += migx*2
+        while(az + naz + renderer.z > migz) naz -= migz*2
+        while(az + naz + renderer.z < -migz) naz += migz*2
+        
+        weaponsTrackShape.x += nax
+        weaponsTrackShape.z += naz
         for(var i = 0; i< weaponsTrackShape.vertices.length; i+=3){
-          weaponsTrackShape.vertices[i+1] = floor(weaponsTrackShape.vertices[i+0],
-                                           weaponsTrackShape.vertices[i+2]) - 1e3
+          weaponsTrackShape.vertices[i+1] = floor(weaponsTrackShape.x + weaponsTrackShape.vertices[i+0],
+                                           weaponsTrackShape.z + weaponsTrackShape.vertices[i+2]) - 1e3
         }
         renderer.Draw(weaponsTrackShape)
         
@@ -1381,9 +1425,9 @@ $file = <<<FILE
               var fl = floor(l[0] + splosion.x + l[3], l[2] + splosion.z + l[5])
               if(l[1] + splosion.y + l[4]< fl - 55) {
                 l[1] =  fl - 55 - splosion.y
-                l[3] /= 1.25
-                l[4] = Math.abs(l[4]) / 2.5
-                l[5] /= 1.25
+                l[3] /= 1.2
+                l[4] = Math.abs(l[4]) / 1.5
+                l[5] /= 1.2
               }
               splosionShape.vertices[j+0] = l[0] += l[3]
               splosionShape.vertices[j+1] = (l[1] += l[4] -= grav / 10)
@@ -1406,9 +1450,9 @@ $file = <<<FILE
               var fl = floor(l[0] + sparks.x + l[3], l[2] + sparks.z + l[5])
               if(l[1] + sparks.y + l[4]< fl - 55) {
                 l[1] =  fl - 55 - sparks.y
-                l[3] /= 1.25
-                l[4] = Math.abs(l[4]) / 2.5
-                l[5] /= 1.25
+                l[3] /= 1.2
+                l[4] = Math.abs(l[4]) / 1.5
+                l[5] /= 1.2
               }
               sparksShape.vertices[j+0] = l[0] += l[3]
               sparksShape.vertices[j+1] = (l[1] += l[4] -= grav / 10)
@@ -1532,7 +1576,6 @@ $file = <<<FILE
               if(+player.id != +bullet.id){
                 d=Math.hypot(mx + player.x, my - player.y, mz + player.z)
                 if(d < chaingunSpeed * 1.25){
-                  console.log('chaingun hit!')
                   bullet.t = -chaingunLife
                   if(Rn() < .5) spawnSparks(bullet.x, bullet.y, bullet.z)
                   if(+player.id == +playerData.id){
@@ -1567,15 +1610,22 @@ $file = <<<FILE
           ax = floorParticles.vertices[i+0]
           az = floorParticles.vertices[i+2]
           
-          if(ax + renderer.x > fcl*8*fls) nax -= fcl*8*fls*2
-          if(ax + renderer.x < -fcl*8*fls) nax += fcl*8*fls*2
-          if(az + renderer.z > fbr*8*fls) naz -= fbr*8*fls*2
-          if(az + renderer.z < -fbr*8*fls) naz += fbr*8*fls*2
+          var migx = fcl*fls * mag * 7.675 * 2
+          var migy = fbr*fls * mag * 7.675 * 2
+          while(ax + nax + renderer.x > migx) nax -= migx*2
+          while(ax + nax + renderer.x < -migx) nax += migx*2
+          while(az + naz + renderer.z > migy) naz -= migy*2
+          while(az + naz + renderer.z < -migy) naz += migy*2
+          
+          var d = false
+          //var d = Math.hypot(floorParticles.vertices[i+0] + nax + renderer.x,
+            //            floorParticles.vertices[i+2] + naz + renderer.z) > migx*1.125
+          
           
           floorParticles.vertices[i+0] += nax
           floorParticles.vertices[i+2] += naz
           floorParticles.vertices[i+1] = floor(floorParticles.vertices[i+0],
-                                      floorParticles.vertices[i+2]) - 300
+                                      floorParticles.vertices[i+2]) - ( d ? 1e6:300)
         }
         await renderer.Draw(floorParticles)
 
@@ -1614,7 +1664,8 @@ $file = <<<FILE
       launch(renderer.width, renderer.height)
 
       // db sync
-      const URLbase = 'https://boss.mindhackers.org/flock'
+      //const URLbase = 'http://52.207.184.99/flock'
+      const URLbase = 'https://bosstools.mooo.com/flock'
       
       const syncPlayers = data => {
         var tPlayers = structuredClone(players)
@@ -1778,22 +1829,37 @@ $file = <<<FILE
 
       const respawn = () => {
         renderer.useKeys = true
-        ls = Rn()**.5*1e5
+        var ls = Rn()**.5*1e5
         var x = S(p=Math.PI*Rn()*2) * ls
         var z = C(p) * ls
-        playerData = {
-          name: '', id: -1,
-          hl: 1, al: true,
-          y: floor(x, z) + 500,
-          gS: 0, mCt: 0,
-          roll: 0, pitch: 0, yaw: 0,
-          mST: 0, cST: 0,
-          hM: true,
-          hC: true,
-          fM: false,
-          fC: false,
-          ip: false,
-          dm: 0,
+        if(typeof playerData == 'undefined'){
+          playerData = {
+            name: '', id: -1,
+            hl: 1, al: true,
+            y: floor(x, z) + 500,
+            gS: 0, mCt: 0,
+            roll: 0, pitch: 0, yaw: 0,
+            mST: 0, cST: 0,
+            hM: true,
+            hC: true,
+            fM: false,
+            fC: false,
+            ip: false,
+            dm: 0,
+          }
+        } else {
+          playerData.hl = 1
+          playerData.al = true
+          playerData.y = floor(x, z) + 500
+          playerData.gS = 0
+          playerData.mCt = 0
+          playerData.pitch = 0
+          playerData.mST = 0
+          playerData.cST = 0
+          playerData.fM = false
+          playerData.fC = false
+          playerData.ip = false
+          playerData.dm = 0
         }
       }
 
