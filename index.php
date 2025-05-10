@@ -153,9 +153,9 @@
       var medkitRespawnSpeed = 50
       var maxPlayerVel = 200
 
-      var refTexture = './pseudoEquirectangular_3.jpg'
+      var refTexture = './equisky3.jpg'
       var heightMap = 'https://srmcgann.github.io/Coordinates/resources/bumpmap_equirectangular_po2.jpg'
-      var floorMap = './floorCircuitry.jpg'
+      var floorMap = './floorCircuitry3.jpg'
       
       var dmOverlay = new Image()
       dmOverlay.src = './damage.png'
@@ -279,7 +279,7 @@
         var weaponsTrackShader = await Coordinates.BasicShader(renderer, shaderOptions)
 
         var shaderOptions = [
-          {lighting: { type: 'ambientLight', value: -.05}},
+          {lighting: { type: 'ambientLight', value: -.035}},
           { uniform: {
             type: 'phong',
             value: 0
@@ -657,7 +657,7 @@
           showSource: false,
           map: 'https://srmcgann.github.io/Coordinates/resources/stars/star0.png',
           size: 25,
-          lum: 2e4,
+          lum: 8e3,
           color: 0xffffff,
         }
         if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
@@ -927,7 +927,6 @@
           id: player.id,
           vx, vy, vz,
         }]
-        console.log('shooting missiles', actualPlayer)
         if(+player.id == +playerData.id) coms('sync.php', 'syncPlayers')
       }
 
@@ -1031,6 +1030,24 @@
         if(!gameLoaded) return
         var c = Coordinates.Overlay.c
 
+        if(playerData.al){
+          if(playerData.dm > .02){
+            ctx.globalAlpha = playerData.dm
+            ctx.drawImage(dmOverlay, 0, 0, c.width, c.height)
+            ctx.globalAlpha = 1
+          }else{
+            playerData.dm = 0
+          }
+          playerData.dm = Math.max(0, playerData.dm /= 1.02)
+        }else{
+          ctx.globalAlpha = playerData.dm = 1
+          scratchCanvas.Draw(skullShape)
+          ctx.drawImage(scratchCanvas.c, 0,0, c.width, c.height)
+          ctx.drawImage(dmDeadOverlay, 0, 0, c.width, c.height)
+          scratchCanvas.z = 32
+          skullShape.yaw += .02
+        }
+
         if(showMenu){
           
           ctx.beginPath()
@@ -1112,24 +1129,6 @@
             var h = res.videoHeight * s
             ctx.drawImage(res, c.width * .9775 - w/2, c.height * .75 - h/2, w, h)
           }
-        }
-        
-        if(playerData.al){
-          if(playerData.dm > .02){
-            ctx.globalAlpha = playerData.dm
-            ctx.drawImage(dmOverlay, 0, 0, c.width, c.height)
-            ctx.globalAlpha = 1
-          }else{
-            playerData.dm = 0
-          }
-          playerData.dm = Math.max(0, playerData.dm /= 1.02)
-        }else{
-          ctx.globalAlpha = playerData.dm = 1
-          scratchCanvas.Draw(skullShape)
-          ctx.drawImage(scratchCanvas.c, 0,0, c.width, c.height)
-          ctx.drawImage(dmDeadOverlay, 0, 0, c.width, c.height)
-          scratchCanvas.z = 32
-          skullShape.yaw += .02
         }
       }
 
@@ -1561,7 +1560,6 @@
                 missile.vy = C(p2) * missileSpeed
                 missile.vz = -C(p1) * S(p2) * missileSpeed
               }else{
-                console.log('missile hit!')
                 missile.t = -missileLife
                 spawnSplosion(missile.x, missile.y, missile.z,
                               missile.vx, missile.vy, missile.vz)
