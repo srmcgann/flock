@@ -79,7 +79,6 @@
 
       ///////////////////////
       
-
       // game guts
       
       import * as Coordinates from
@@ -103,7 +102,7 @@
         return  -d
         */
         
-        return  Math.min(1.125, Math.max(0,C(X/Math.PI/5e3) + C(Z/Math.PI/5e3))) * 1e4
+        return  Math.min(1.125, Math.max(0,C(X/Math.PI/2500) + C(Z/Math.PI/2500))) * 1e4
       }
 
       var X, Y, Z
@@ -119,8 +118,12 @@
       var mrw = 1
       var mbr = 2
       var msp = 1e5 / 1.5
+      var mfpucl = 1
+      var mfpurw = 1
+      var mfpubr = 1
+      var mfpusp = 1e5 / 1.5
       var medkits = Array(mcl*mrw*mbr).fill().map(v=>({visible: true, t: 0}))
-      var flightPowerups = Array(mcl*mrw*mbr).fill().map(v=>({visible: true, t: 0}))
+      var flightPowerups = Array(mfpucl*mfpurw*mfpubr).fill().map(v=>({visible: true, t: 0}))
       var tx, ty, tz
       var ls = 2**.5 / 2 * sp, p, a
       var fls = 2**.5 / 2 * fsp, p, a
@@ -142,23 +145,24 @@
       var showMenu                 = false
       var mST                      = 0
       var mSTInterval              = .3
-      var missileSpeed             = 500
+      var missileSpeed             = 1e3
       var missileLife              = 6
       var cST                      = 0
       var cSTInterval              = .01
-      var chaingunSpeed            = 1e3
+      var chaingunSpeed            = 2e3
       var chaingunLife             = 6
       var smokeLife                = 5
       var missilePowerupShape, powerupAuras
       var powerupRespawnSpeed = 80
       var medkitRespawnSpeed = 50
-      var flightPowerupRespawnSpeed = 50
+      var flightPowerupRespawnSpeed = 20
       var flightTime = 50
       var maxPlayerVel = 200
 
-      var refTexture = './equisky3.jpg'
+      //var refTexture = './equisky3.jpg'
+      var refTexture = './pseudoEquirectangular_3.jpg'
       var heightMap = 'https://srmcgann.github.io/Coordinates/resources/bumpmap_equirectangular_po2.jpg'
-      var floorMap = './floorCircuitry3.jpg'
+      var floorMap = './floorCircuitry.jpg'
       
       var dmOverlay = new Image()
       dmOverlay.src = './damage.png'
@@ -457,9 +461,9 @@
           map: 'https://srmcgann.github.io/Coordinates/resources/stars/star7.png',
           name: 'tractor',
           x: 0, z: 0,
-          y: floor(0,0) + 2e4,
+          y: floor(0,0) + 1e5,
           involveCache: false,
-          size: 100,
+          size: 200,
         }
         if(1){
           await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
@@ -472,8 +476,8 @@
           shapeType: 'sprite',
           map: './powerupAura.png?3',
           name: 'generic powerup aura',
-          scaleY: .66,
-          size: 140
+          //scaleY: .66,
+          size: 150
         }
         if(1){
           await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
@@ -552,16 +556,14 @@
         })
 
         var geoOptions = {
-          shapeType: 'obj',
-          url: 'https://srmcgann.github.io/objs/bird ship/missile.obj',
+          shapeType: 'custom shape',
+          url: './missile.json',
           map: './birdship.png',
           name: 'missile',
           rotationMode: 1,
           colorMix: 0,
-          scaleX: 50,
-          scaleY: 50,
-          scaleZ: 50,
-          size: 1,
+          //averageNormals: true,
+          //exportShape: true
         }
         if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           missileShape = geometry
@@ -589,7 +591,7 @@
           shapeType: 'dodecahedron',
           name: 'background',
           subs: 2,
-          size: 3e5,
+          size: 5e5,
           sphereize: 1,
           colorMix: 0,
           playbackSpeed: 1,
@@ -674,9 +676,9 @@
           isParticle: true,
           size: 600,
           //geometryData,
-          color: 0x00ff66,
-          alpha: .3,
-          penumbra: .25,
+          color: 0x4400ff,
+          alpha: .5,
+          penumbra: .2,
           scaleX: 20,
           scaleZ: 20,
           //exportShape: true
@@ -691,7 +693,7 @@
           showSource: false,
           map: 'https://srmcgann.github.io/Coordinates/resources/stars/star0.png',
           size: 25,
-          lum: 8e3,
+          lum: 1e4,
           color: 0xffffff,
         }
         if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
@@ -786,7 +788,7 @@
         })  
 
         Coordinates.LoadFPSControls(renderer, {
-          mSpeed: 500,
+          mSpeed: 300,
           flyMode: false,
           crosshairSel: 2,
           crosshairSize: .5
@@ -1174,7 +1176,8 @@
         playerData.fM = false
         playerData.fC = false
         
-        renderer.mspeed = renderer.flyMode ? 600 : 300
+        console.log(renderer.flyMode, renderer.mspeed)
+        renderer.mspeed = renderer.flyMode ? 1e3 : 300
         
         playerData.gS = playerData.mCt > 0 ? 0 : 1
         
@@ -1297,8 +1300,8 @@
           if(flightPowerups[i].visible || t - flightPowerups[i].t > medkitRespawnSpeed){
             if(t - flightPowerups[i].t > medkitRespawnSpeed) flightPowerups[i].visible = true
             ax = ay = az = nax = nay = naz = 0            
-            var ax = flightPowerupShape.x = ((i%mcl)-mcl/2 + .5) * msp
-            var az = flightPowerupShape.z = ((i/mcl/mrw|0)-mbr/2 + .5) * msp
+            var ax = flightPowerupShape.x = ((i%mfpucl)-mfpucl/2 + .5) * mfpusp
+            var az = flightPowerupShape.z = ((i/mfpucl/mfpurw|0)-mfpubr/2 + .5) * mfpusp
             
             var migx = 1e5
             var migz = 1e5
@@ -1309,7 +1312,7 @@
 
             flightPowerupShape.x += nax
             flightPowerupShape.z += naz
-            flightPowerupShape.y = 35000 + floor(flightPowerupShape.x, flightPowerupShape.z) + (((i/mcl|0)%mrw)-mrw/2 + .5) * msp
+            flightPowerupShape.y = 3e4 + floor(flightPowerupShape.x, flightPowerupShape.z) + (((i/mfpucl|0)%mfpurw)-mfpurw/2 + .5) * mfpusp
             var d = Math.hypot(-playerData.x - flightPowerupShape.x, 
                            playerData.y - flightPowerupShape.y, 
                           -playerData.z - flightPowerupShape.z)
@@ -1361,7 +1364,7 @@
                     await renderer.Draw(powerup)
                     
                     thrusterPowerupShape.x = powerup.x
-                    thrusterPowerupShape.y = powerup.y -450
+                    thrusterPowerupShape.y = powerup.y -1e3
                     thrusterPowerupShape.z = powerup.z
                     await renderer.Draw(thrusterPowerupShape)
                   }
@@ -1610,7 +1613,7 @@
               }
             })
             if(midx != -1){
-              if(mind > missileSpeed * 1.25) {
+              if(mind > missileSpeed * 1.5) {
                 var tx = -players[midx].x
                 var ty = players[midx].y
                 var tz = -players[midx].z
@@ -1668,7 +1671,7 @@
               missileShape.yaw = missile.yaw
               await renderer.Draw(missileShape)
               
-              var offset = Coordinates.R_pyr(0, -5, -22, missile)
+              var offset = Coordinates.R_pyr(0, -5, -200, missile)
               thrusterShape.x = missile.x + offset[0]
               thrusterShape.y = missile.y + offset[1]
               thrusterShape.z = missile.z + offset[2]
