@@ -120,6 +120,7 @@
       var mbr = 2
       var msp = 1e5 / 1.5
       var medkits = Array(mcl*mrw*mbr).fill().map(v=>({visible: true, t: 0}))
+      var flightPowerups = Array(mcl*mrw*mbr).fill().map(v=>({visible: true, t: 0}))
       var tx, ty, tz
       var ls = 2**.5 / 2 * sp, p, a
       var fls = 2**.5 / 2 * fsp, p, a
@@ -134,9 +135,9 @@
       var gunShape, missileShape, bulletShape, tractorShape
       var muzzleFlair, chaingunShape, tractorShapeBaseVertices
       var muzzleFlairBase, thrusterShape, thrusterPowerupShape
-      var medkitShape, skullShape
+      var flightPowerupShape, medkitShape, skullShape
       var sparksShape, splosionShape, weaponsTrackShape
-      var bulletParticles, floorParticles
+      var bulletParticles, floorParticles, genericPowerupAura
       var smokeParticles
       var showMenu                 = false
       var mST                      = 0
@@ -151,6 +152,8 @@
       var missilePowerupShape, powerupAuras
       var powerupRespawnSpeed = 80
       var medkitRespawnSpeed = 50
+      var flightPowerupRespawnSpeed = 50
+      var flightTime = 50
       var maxPlayerVel = 200
 
       var refTexture = './equisky3.jpg'
@@ -233,7 +236,7 @@
         var shader = await Coordinates.BasicShader(renderer, shaderOptions)
 
         var shaderOptions = [
-          {lighting: { type: 'ambientLight', value: .25}},
+          {lighting: { type: 'ambientLight', value: .1}},
           { uniform: {
             type: 'phong',
             value: .2
@@ -391,11 +394,29 @@
           shapeType: 'sprite',
           map: 'medkit_lowres.png',
           name: 'medkit',
-          size: 36,
+          size: 50,
         }
         if(1){
           await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
             medkitShape = geometry
+          })
+        }
+
+        var geoOptions = {
+          shapeType: 'custom shape',
+          url: 'https://srmcgann.github.io/Coordinates/custom shapes/bird ship/wings.json',
+          map: 'https://srmcgann.github.io/Coordinates/custom shapes/bird ship/feathers.jpg',
+          //scaleX: 600,
+          //scaleY: 600,
+          //scaleZ: 600,
+          name: 'flight powerup',
+          //averageNormals: true,
+          //exportShape: true,
+        }
+        if(1){
+          await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
+            flightPowerupShape = geometry
+            await powerupShader.ConnectGeometry(geometry)
           })
         }
 
@@ -444,6 +465,19 @@
           await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
             tractorShape = geometry
             tractorShapeBaseVertices = structuredClone(geometry.vertices)
+          })
+        }
+
+        var geoOptions = {
+          shapeType: 'sprite',
+          map: './powerupAura.png',
+          name: 'generic powerup aura',
+          scaleY: .66,
+          size: 140
+        }
+        if(1){
+          await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
+            genericPowerupAura = geometry
           })
         }
 
@@ -1253,6 +1287,47 @@
                 medkits[i].t = t
               }
               await renderer.Draw(medkitShape)
+            }
+          }
+        }
+
+        for(var i = 0; i<flightPowerups.length; i++){
+          if(flightPowerups[i].visible || t - flightPowerups[i].t > medkitRespawnSpeed){
+            if(t - flightPowerups[i].t > medkitRespawnSpeed) flightPowerups[i].visible = true
+            ax = ay = az = nax = nay = naz = 0            
+            var ax = flightPowerupShape.x = ((i%mcl)-mcl/2 + .5) * msp
+            var az = flightPowerupShape.z = ((i/mcl/mrw|0)-mbr/2 + .5) * msp
+            
+            var migx = 1e5
+            var migz = 1e5
+            while(ax + nax + renderer.x > migx) nax -= migx*2
+            while(ax + nax + renderer.x < -migx) nax += migx*2
+            while(az + naz + renderer.z > migz) naz -= migz*2
+            while(az + naz + renderer.z < -migz) naz += migz*2
+
+            flightPowerupShape.x += nax
+            flightPowerupShape.z += naz
+            flightPowerupShape.y = 3e4 + floor(flightPowerupShape.x, flightPowerupShape.z) + (((i/mcl|0)%mrw)-mrw/2 + .5) * msp
+            var d = Math.hypot(-playerData.x - flightPowerupShape.x, 
+                           playerData.y - flightPowerupShape.y, 
+                          -playerData.z - flightPowerupShape.z)
+            if(d < 1e5){
+              if(d < 5e3){
+                renderer.flyMode = true
+                setTimeout(()=>{
+                  renderer.flyMode = false
+                }, flightTime * 1000)
+                playerData.hl = 1
+                flightPowerups[i].visible = false
+                flightPowerups[i].t = t
+              }
+              
+              flightPowerupShape.yaw = t * 2
+              await renderer.Draw(flightPowerupShape)
+              genericPowerupAura.x = flightPowerupShape.x
+              genericPowerupAura.y = flightPowerupShape.y
+              genericPowerupAura.z = flightPowerupShape.z
+              await renderer.Draw(genericPowerupAura)
             }
           }
         }
