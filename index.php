@@ -470,7 +470,7 @@
 
         var geoOptions = {
           shapeType: 'sprite',
-          map: './powerupAura.png',
+          map: './powerupAura.png?3',
           name: 'generic powerup aura',
           scaleY: .66,
           size: 140
@@ -1174,6 +1174,8 @@
         playerData.fM = false
         playerData.fC = false
         
+        renderer.mspeed = renderer.flyMode ? 600 : 300
+        
         playerData.gS = playerData.mCt > 0 ? 0 : 1
         
         if(document.activeElement.nodeName == 'CANVAS'){
@@ -1307,7 +1309,7 @@
 
             flightPowerupShape.x += nax
             flightPowerupShape.z += naz
-            flightPowerupShape.y = 3e4 + floor(flightPowerupShape.x, flightPowerupShape.z) + (((i/mcl|0)%mrw)-mrw/2 + .5) * msp
+            flightPowerupShape.y = 35000 + floor(flightPowerupShape.x, flightPowerupShape.z) + (((i/mcl|0)%mrw)-mrw/2 + .5) * msp
             var d = Math.hypot(-playerData.x - flightPowerupShape.x, 
                            playerData.y - flightPowerupShape.y, 
                           -playerData.z - flightPowerupShape.z)
