@@ -1,3 +1,11 @@
+<!--
+  to-do:
+    * sound efx / music w/mute-button
+    * item/track tile movement -> x2 scale
+    * levels / arenas w/ selection menu
+    * load-time optimizations (pre-resize everything)
+    * 'sessions' engine w/ max players
+-->
 <!DOCTYPE html>
 <html>
   <head>
@@ -15,7 +23,7 @@
         top: 0;
         left: 0;
         opacity: .7;
-        z-index: 10000;
+        z-index: 50;
       }
       .overlayContent{
         object-fit: contain;
@@ -1717,7 +1725,7 @@
             l[idx*3+0] = bullet.x += bullet.vx
             l[idx*3+1] = bullet.y += bullet.vy
             l[idx*3+2] = bullet.z += bullet.vz
-            if(bullet.y < floor(bullet.x, bullet.z)){
+            if(bullet.y + bullet.vy * 2  < floor(bullet.x + bullet.vx*2, bullet.z + bullet.vz*2)){
               bullet.t = -chaingunLife
               if(Rn() < .33) spawnSparks(bullet.x, bullet.y, bullet.z)
             }
