@@ -222,6 +222,51 @@
       var sparks       = []
       var baseSplosion = []
       var baseSparks   = []
+      
+      var sounds = [
+        { name: 'radar warning',
+          resource: new Audio('./radarWarning.mp3'),
+          loop: true, volume: .25},
+        { name: 'metal 1',
+          resource: new Audio('./metal1.ogg'),
+          loop: true, volume: .5},
+        { name: 'metal 2',
+          resource: new Audio('./metal2.ogg'),
+          loop: true, volume: .5},
+        { name: 'metal 3',
+          resource: new Audio('./metal3.ogg'),
+          loop: true, volume: .5},
+        { name: 'metal 4',
+          resource: new Audio('./metal4.ogg'),
+          loop: true, volume: .5},
+        { name: 'metal 5',
+          resource: new Audio('./metal5.ogg'),
+          loop: true, volume: .5},
+      ]
+      
+      sounds.map(sound => {
+        sound.resource.oncanplay = e => {
+          if(sound.loop) sound.resource.loop = true
+          sound.resource.volume = sound.volume
+        }
+      })
+      
+      const startSound = soundName => {
+        var sound = sounds.filter(v=>v.name == soundName)
+        if(sound.length){
+          var resource = sound[0].resource
+          if(resource.paused) resource.play()
+        }
+      }
+
+      const stopSound = soundName => {
+        var sound = sounds.filter(v=>v.name == soundName)
+        if(sound.length){
+          var resource = sound[0].resource
+          resource.pause()
+          resource.currentTime = 0
+        }
+      }
 
       var launch = async (width, height) => {
         var ar = width / height
@@ -1071,8 +1116,19 @@
       }
       
       const drawMenu = () => {
+        
         if(!gameLoaded) return
         var c = Coordinates.Overlay.c
+        var t = renderer.t
+        
+        
+        // radar warning
+        if(playerData.painted && (((t*60|0)%10) < 5)){
+          ctx.fillStyle = '#f04'
+          ctx.fillRect(0,0,c.width, c.height)
+          ctx.clearRect(100,100,c.width-200, c.height-200)
+        }
+        
 
         if(playerData.al){
           if(playerData.dm > .02){
@@ -1603,6 +1659,8 @@
                                    missile.vx, missile.vy, missile.vz)
             return ret
           })
+          
+          playerData.painted = false
           missiles.map(async missile => {
 
             // heat-seeking
@@ -1614,13 +1672,17 @@
             var mind = 6e6
             var d, midx = -1
             players.map((player, idx) => {
-              if(+player.id != +missile.id &&
+              if(player.al && +player.id != +missile.id &&
                  (d=Math.hypot(mx + player.x, my - player.y, mz + player.z)) < mind){
                   mind = d
                   midx = idx
               }
             })
             if(midx != -1){
+              if(players[midx].id == playerData.id){
+                startSound('radar warning')
+                playerData.painted = true
+              }
               if(mind > missileSpeed * 1.5) {
                 var tx = -players[midx].x
                 var ty = players[midx].y
@@ -1689,6 +1751,10 @@
               await renderer.Draw(thrusterShape)
             }
           })
+          
+          if(!playerData.painted){
+            stopSound('radar warning')
+          }
         }
 
         if(typeof bulletParticles != 'undefined'){
@@ -1839,9 +1905,10 @@
               v.x               = player.x
               v.y               = player.y
               v.z               = player.z
+              v.yaw             = player.yaw
               v.roll            = player.roll
               v.pitch           = player.pitch
-              v.yaw             = player.yaw
+              v.painted         = player.painted
               v.keep            = true
             }else{
               var newObj = {
@@ -1864,6 +1931,7 @@
               newObj.hl                = player.hl
               newObj.name              = player.name
               newObj.id                = +player.id
+              newObj.painted           = player.painted
               newObj.x                 = newObj.ix     = player.x
               newObj.y                 = newObj.iy     = player.y
               newObj.z                 = newObj.iz     = player.z
@@ -1931,7 +1999,7 @@
           if(callback) eval(callback + '(data)')
         })
       }
-      
+
       const gameSync = () => {
         playerData.x = renderer.x
         playerData.y = -renderer.y
@@ -1988,6 +2056,7 @@
           playerData.fC = false
           playerData.ip = false
           playerData.dm = 0
+          playerData.painted = false
         }
       }
 
