@@ -6,6 +6,7 @@
     * load-time optimizations (pre-resize everything)
     * 'sessions' engine w/ max players
 -->
+
 <!DOCTYPE html>
 <html>
   <head>
@@ -225,39 +226,51 @@
       
       var sounds = [
         { name: 'radar warning',
+          url: './radarWarning.mp3',
           resource: new Audio('./radarWarning.mp3'),
           loop: true, volume: .3},
         { name: 'metal 1',
+          url: './metal1.ogg',
           resource: new Audio('./metal1.ogg'),
           loop: false, volume: .35},
         { name: 'metal 2',
+          url: './metal2.ogg',
           resource: new Audio('./metal2.ogg'),
           loop: false, volume: .35},
         { name: 'metal 3',
+          url: './metal3.ogg',
           resource: new Audio('./metal3.ogg'),
           loop: false, volume: .35},
         { name: 'metal 4',
+          url: './metal4.ogg',
           resource: new Audio('./metal4.ogg'),
           loop: false, volume: .35},
         { name: 'metal 5',
+          url: './metal5.ogg',
           resource: new Audio('./metal5.ogg'),
           loop: false, volume: .35},
         { name: 'pew',
+          url: './pew.ogg',
           resource: new Audio('./pew.ogg'),
           loop: false, volume: .25},
         { name: 'splode',
+          url: './splode.ogg',
           resource: new Audio('./splode.ogg'),
           loop: false, volume: .5},
         { name: 'powerup',
+          url: './upgrade.ogg',
           resource: new Audio('./upgrade.ogg'),
           loop: false, volume: .5},
         { name: 'megaPowerup',
+          url: './megaUpgrade.ogg',
           resource: new Audio('./megaUpgrade.ogg'),
           loop: false, volume: .5},
         { name: 'music',
+          url: './colossus.mp3',
           resource: new Audio('./colossus.mp3'),
           loop: true, volume: .2},
         { name: 'missile',
+          url: './missile.ogg',
           resource: new Audio('./missile.ogg'),
           loop: false, volume: .5},
       ]
@@ -273,7 +286,7 @@
         if(!navigator.userActivation.hasBeenActive) return
         var sound = sounds.filter(v=>v.name == soundName)
         if(sound.length){
-          var resource = sound[0].resource
+          var resource = sound[0].loop ? sound[0].resource : new Audio(sound[0].url)
           if(resource.paused || !sound[0].loop){
             if(!sound[0].loop) {
               resource.currentTime = 0
@@ -954,7 +967,7 @@
       const spawnSplosion = (x, y, z, vx, vy, vz) => {
         spawnSparks(x, y, z)
         var fl = floor(x, z)
-        if(Math.abs(y - fl < 20)) y = fl - 55
+        if(Math.abs(y - fl < 20)) y = fl + 55
         spawnFlash(x, y, z, 3)
         vx = (vx/3) //** 3 / 5
         vy = (vy/3) //** 3 / 5
@@ -966,9 +979,10 @@
           return v
         })
         splosions = [...splosions, {x, y, z, data, age: 1}]
-        var vol = 1 / (1+(1+Math.hypot(renderer.x - x,
+        var vol = 1 / (1+(1+Math.hypot(renderer.x + x,
                                        renderer.y - y,
-                                       renderer.y - z))**2/200)
+                                       renderer.z + z))**2/200000000)
+        console.log('starting sound with vol:', vol)
         startSound('splode', vol)
       }
       
@@ -1276,7 +1290,6 @@
         playerData.fM = false
         playerData.fC = false
         
-        console.log(renderer.flyMode, renderer.mspeed)
         renderer.mspeed = renderer.flyMode ? 1e3 : 300
         
         playerData.gS = playerData.mCt > 0 ? 0 : 1
@@ -1750,8 +1763,6 @@
                 missile.vz = -C(p1) * S(p2) * missileSpeed
               }else{
                 missile.t = -missileLife
-                spawnSplosion(missile.x, missile.y, missile.z,
-                              missile.vx, missile.vy, missile.vz)
                 if(+players[midx].id == +playerData.id){
                   playerData.hl -= missileDamage
                   if(playerData.hl <= 0){
@@ -1759,7 +1770,6 @@
                     playerData.dm = 1
                     playerData.al = false
                     renderer.useKeys = false
-                    spawnSplosion(playerData.x, playerData.y, playerData.z, 0, 0, 0)
                   }else{
                     playerData.dm += missileDamage * 4
                   }
@@ -1767,11 +1777,9 @@
                 }
               }
             }
-            
-            if(missile.y + missile.vy < floor(missile.x + missile.vx, missile.z + missile.vz)){
+            var fl = floor(missile.x + missile.vx * 2, missile.z + missile.vz * 2)
+            if(missile.y + missile.vy * 2 < fl){
               missile.t = -missileLife
-              spawnSplosion(missile.x, missile.y, missile.z,
-                            missile.vx, missile.vy, missile.vz)
             } else {
               missileShape.x = missile.x += missile.vx
               missileShape.y = missile.y += missile.vy
