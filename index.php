@@ -967,7 +967,7 @@
         splosions = [...splosions, {x, y, z, data, age: 1}]
         var vol = 1 / (1+(1+Math.hypot(renderer.x - x,
                                        renderer.y - y,
-                                       renderer.y - z))**2/1e3)
+                                       renderer.y - z))**2/200)
         startSound('splode', vol)
       }
       
@@ -1050,6 +1050,7 @@
           vx, vy, vz,
         }]
         if(+player.id == +playerData.id) coms('sync.php', 'syncPlayers')
+        startSound('missile')
       }
 
       const fireChainguns = player => {
