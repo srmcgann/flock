@@ -226,22 +226,22 @@
       var sounds = [
         { name: 'radar warning',
           resource: new Audio('./radarWarning.mp3'),
-          loop: true, volume: .25},
+          loop: true, volume: .3},
         { name: 'metal 1',
           resource: new Audio('./metal1.ogg'),
-          loop: false, volume: .5},
+          loop: false, volume: .35},
         { name: 'metal 2',
           resource: new Audio('./metal2.ogg'),
-          loop: false, volume: .5},
+          loop: false, volume: .35},
         { name: 'metal 3',
           resource: new Audio('./metal3.ogg'),
-          loop: false, volume: .5},
+          loop: false, volume: .35},
         { name: 'metal 4',
           resource: new Audio('./metal4.ogg'),
-          loop: false, volume: .5},
+          loop: false, volume: .35},
         { name: 'metal 5',
           resource: new Audio('./metal5.ogg'),
-          loop: false, volume: .5},
+          loop: false, volume: .35},
         { name: 'pew',
           resource: new Audio('./pew.ogg'),
           loop: false, volume: .25},
@@ -251,6 +251,12 @@
         { name: 'powerup',
           resource: new Audio('./upgrade.ogg'),
           loop: false, volume: .5},
+        { name: 'megaPowerup',
+          resource: new Audio('./megaUpgrade.ogg'),
+          loop: false, volume: .5},
+        { name: 'music',
+          resource: new Audio('./colossus.mp3'),
+          loop: true, volume: .2},
       ]
       
       sounds.map(sound => {
@@ -260,7 +266,7 @@
         }
       })
       
-      const startSound = soundName => {
+      const startSound = (soundName, volume=1) => {
         var sound = sounds.filter(v=>v.name == soundName)
         if(sound.length){
           var resource = sound[0].resource
@@ -269,6 +275,7 @@
               resource.currentTime = 0
               resource.pause()
             }
+            resource.volume = sound[0].volume * volume
             resource.play()
           }
         }
@@ -284,6 +291,7 @@
       }
 
       var launch = async (width, height) => {
+        startSound('music')
         var ar = width / height
         width = Math.min(1e3, width)
         height = width / ar
@@ -954,7 +962,10 @@
           return v
         })
         splosions = [...splosions, {x, y, z, data, age: 1}]
-        startSound('splode')
+        var vol = 1 / (1+(1+Math.hypot(renderer.x - x,
+                                       renderer.y - y,
+                                       renderer.y - z))**2/1e3)
+        startSound('splode', vol)
       }
       
       const spawnSparks = (x, y, z) => {
@@ -1374,6 +1385,7 @@
                 playerData.hl = 1
                 medkits[i].visible = false
                 medkits[i].t = t
+                startSound('powerup')
               }
               await renderer.Draw(medkitShape)
             }
@@ -1409,6 +1421,7 @@
                 playerData.hl = 1
                 flightPowerups[i].visible = false
                 flightPowerups[i].t = t
+                startSound('megaPowerup')
               }
               
               flightPowerupShape.yaw = t * 2
