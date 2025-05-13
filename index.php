@@ -270,6 +270,7 @@
       })
       
       const startSound = (soundName, volume=1) => {
+        if(!navigator.userActivation.hasBeenActive) return
         var sound = sounds.filter(v=>v.name == soundName)
         if(sound.length){
           var resource = sound[0].resource

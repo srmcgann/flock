@@ -1,5 +1,13 @@
 <?
 $file = <<<'FILE'
+<!--
+  to-do:
+    * sound efx / music w/mute-button
+    * item/track tile movement -> x2 scale
+    * levels / arenas w/ selection menu
+    * load-time optimizations (pre-resize everything)
+    * 'sessions' engine w/ max players
+-->
 <!DOCTYPE html>
 <html>
   <head>
@@ -17,7 +25,7 @@ $file = <<<'FILE'
         top: 0;
         left: 0;
         opacity: .7;
-        z-index: 10000;
+        z-index: 50;
       }
       .overlayContent{
         object-fit: contain;
@@ -81,7 +89,6 @@ $file = <<<'FILE'
 
       ///////////////////////
       
-
       // game guts
       
       import * as Coordinates from
@@ -105,7 +112,7 @@ $file = <<<'FILE'
         return  -d
         */
         
-        return  Math.min(1.125, Math.max(0,C(X/Math.PI/5e3) + C(Z/Math.PI/5e3))) * 1e4
+        return  Math.min(1.125, Math.max(0,C(X/Math.PI/2500) + C(Z/Math.PI/2500))) * 1e4
       }
 
       var X, Y, Z
@@ -121,7 +128,12 @@ $file = <<<'FILE'
       var mrw = 1
       var mbr = 2
       var msp = 1e5 / 1.5
+      var mfpucl = 1
+      var mfpurw = 1
+      var mfpubr = 1
+      var mfpusp = 1e5 / 1.5
       var medkits = Array(mcl*mrw*mbr).fill().map(v=>({visible: true, t: 0}))
+      var flightPowerups = Array(mfpucl*mfpurw*mfpubr).fill().map(v=>({visible: true, t: 0}))
       var tx, ty, tz
       var ls = 2**.5 / 2 * sp, p, a
       var fls = 2**.5 / 2 * fsp, p, a
@@ -136,25 +148,28 @@ $file = <<<'FILE'
       var gunShape, missileShape, bulletShape, tractorShape
       var muzzleFlair, chaingunShape, tractorShapeBaseVertices
       var muzzleFlairBase, thrusterShape, thrusterPowerupShape
-      var medkitShape, skullShape
+      var flightPowerupShape, medkitShape, skullShape
       var sparksShape, splosionShape, weaponsTrackShape
-      var bulletParticles, floorParticles
+      var bulletParticles, floorParticles, genericPowerupAura
       var smokeParticles
       var showMenu                 = false
       var mST                      = 0
       var mSTInterval              = .3
-      var missileSpeed             = 500
+      var missileSpeed             = 1e3
       var missileLife              = 6
       var cST                      = 0
-      var cSTInterval              = .01
-      var chaingunSpeed            = 1e3
+      var cSTInterval              = .05
+      var chaingunSpeed            = 2e3
       var chaingunLife             = 6
       var smokeLife                = 5
       var missilePowerupShape, powerupAuras
       var powerupRespawnSpeed = 80
       var medkitRespawnSpeed = 50
+      var flightPowerupRespawnSpeed = 20
+      var flightTime = 50
       var maxPlayerVel = 200
 
+      //var refTexture = './equisky3.jpg'
       var refTexture = './pseudoEquirectangular_3.jpg'
       var heightMap = 'https://srmcgann.github.io/Coordinates/resources/bumpmap_equirectangular_po2.jpg'
       var floorMap = './floorCircuitry.jpg'
@@ -209,8 +224,80 @@ $file = <<<'FILE'
       var sparks       = []
       var baseSplosion = []
       var baseSparks   = []
+      
+      var sounds = [
+        { name: 'radar warning',
+          resource: new Audio('./radarWarning.mp3'),
+          loop: true, volume: .3},
+        { name: 'metal 1',
+          resource: new Audio('./metal1.ogg'),
+          loop: false, volume: .35},
+        { name: 'metal 2',
+          resource: new Audio('./metal2.ogg'),
+          loop: false, volume: .35},
+        { name: 'metal 3',
+          resource: new Audio('./metal3.ogg'),
+          loop: false, volume: .35},
+        { name: 'metal 4',
+          resource: new Audio('./metal4.ogg'),
+          loop: false, volume: .35},
+        { name: 'metal 5',
+          resource: new Audio('./metal5.ogg'),
+          loop: false, volume: .35},
+        { name: 'pew',
+          resource: new Audio('./pew.ogg'),
+          loop: false, volume: .25},
+        { name: 'splode',
+          resource: new Audio('./splode.ogg'),
+          loop: false, volume: .5},
+        { name: 'powerup',
+          resource: new Audio('./upgrade.ogg'),
+          loop: false, volume: .5},
+        { name: 'megaPowerup',
+          resource: new Audio('./megaUpgrade.ogg'),
+          loop: false, volume: .5},
+        { name: 'music',
+          resource: new Audio('./colossus.mp3'),
+          loop: true, volume: .2},
+        { name: 'missile',
+          resource: new Audio('./missile.ogg'),
+          loop: false, volume: .5},
+      ]
+      
+      sounds.map(sound => {
+        sound.resource.oncanplay = e => {
+          if(sound.loop) sound.resource.loop = true
+          sound.resource.volume = sound.volume
+        }
+      })
+      
+      const startSound = (soundName, volume=1) => {
+        if(!navigator.userActivation.hasBeenActive) return
+        var sound = sounds.filter(v=>v.name == soundName)
+        if(sound.length){
+          var resource = sound[0].resource
+          if(resource.paused || !sound[0].loop){
+            if(!sound[0].loop) {
+              resource.currentTime = 0
+              resource.pause()
+            }
+            resource.volume = sound[0].volume * volume
+            resource.play()
+          }
+        }
+      }
+
+      const stopSound = soundName => {
+        var sound = sounds.filter(v=>v.name == soundName)
+        if(sound.length){
+          var resource = sound[0].resource
+          resource.pause()
+          resource.currentTime = 0
+        }
+      }
 
       var launch = async (width, height) => {
+        startSound('music')
         var ar = width / height
         width = Math.min(1e3, width)
         height = width / ar
@@ -235,7 +322,7 @@ $file = <<<'FILE'
         var shader = await Coordinates.BasicShader(renderer, shaderOptions)
 
         var shaderOptions = [
-          {lighting: { type: 'ambientLight', value: .25}},
+          {lighting: { type: 'ambientLight', value: .1}},
           { uniform: {
             type: 'phong',
             value: .2
@@ -281,7 +368,7 @@ $file = <<<'FILE'
         var weaponsTrackShader = await Coordinates.BasicShader(renderer, shaderOptions)
 
         var shaderOptions = [
-          {lighting: { type: 'ambientLight', value: -.05}},
+          {lighting: { type: 'ambientLight', value: -.035}},
           { uniform: {
             type: 'phong',
             value: 0
@@ -393,11 +480,29 @@ $file = <<<'FILE'
           shapeType: 'sprite',
           map: 'medkit_lowres.png',
           name: 'medkit',
-          size: 36,
+          size: 50,
         }
         if(1){
           await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
             medkitShape = geometry
+          })
+        }
+
+        var geoOptions = {
+          shapeType: 'custom shape',
+          url: 'https://srmcgann.github.io/Coordinates/custom shapes/bird ship/wings.json',
+          map: 'https://srmcgann.github.io/Coordinates/custom shapes/bird ship/feathers.jpg',
+          //scaleX: 600,
+          //scaleY: 600,
+          //scaleZ: 600,
+          name: 'flight powerup',
+          //averageNormals: true,
+          //exportShape: true,
+        }
+        if(1){
+          await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
+            flightPowerupShape = geometry
+            await powerupShader.ConnectGeometry(geometry)
           })
         }
 
@@ -438,14 +543,27 @@ $file = <<<'FILE'
           map: 'https://srmcgann.github.io/Coordinates/resources/stars/star7.png',
           name: 'tractor',
           x: 0, z: 0,
-          y: floor(0,0) + 2e4,
+          y: floor(0,0) + 1e5,
           involveCache: false,
-          size: 100,
+          size: 200,
         }
         if(1){
           await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
             tractorShape = geometry
             tractorShapeBaseVertices = structuredClone(geometry.vertices)
+          })
+        }
+
+        var geoOptions = {
+          shapeType: 'sprite',
+          map: './powerupAura.png?3',
+          name: 'generic powerup aura',
+          //scaleY: .66,
+          size: 150
+        }
+        if(1){
+          await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
+            genericPowerupAura = geometry
           })
         }
 
@@ -520,16 +638,14 @@ $file = <<<'FILE'
         })
 
         var geoOptions = {
-          shapeType: 'obj',
-          url: 'https://srmcgann.github.io/objs/bird ship/missile.obj',
+          shapeType: 'custom shape',
+          url: './missile.json',
           map: './birdship.png',
           name: 'missile',
           rotationMode: 1,
           colorMix: 0,
-          scaleX: 50,
-          scaleY: 50,
-          scaleZ: 50,
-          size: 1,
+          //averageNormals: true,
+          //exportShape: true
         }
         if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           missileShape = geometry
@@ -557,7 +673,7 @@ $file = <<<'FILE'
           shapeType: 'dodecahedron',
           name: 'background',
           subs: 2,
-          size: 3e5,
+          size: 5e5,
           sphereize: 1,
           colorMix: 0,
           playbackSpeed: 1,
@@ -642,9 +758,9 @@ $file = <<<'FILE'
           isParticle: true,
           size: 600,
           //geometryData,
-          color: 0x00ff66,
-          alpha: .3,
-          penumbra: .25,
+          color: 0x4400ff,
+          alpha: .5,
+          penumbra: .2,
           scaleX: 20,
           scaleZ: 20,
           //exportShape: true
@@ -659,7 +775,7 @@ $file = <<<'FILE'
           showSource: false,
           map: 'https://srmcgann.github.io/Coordinates/resources/stars/star0.png',
           size: 25,
-          lum: 2e4,
+          lum: 1e4,
           color: 0xffffff,
         }
         if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
@@ -754,7 +870,7 @@ $file = <<<'FILE'
         })  
 
         Coordinates.LoadFPSControls(renderer, {
-          mSpeed: 500,
+          mSpeed: 300,
           flyMode: false,
           crosshairSel: 2,
           crosshairSize: .5
@@ -852,6 +968,10 @@ $file = <<<'FILE'
           return v
         })
         splosions = [...splosions, {x, y, z, data, age: 1}]
+        var vol = 1 / (1+(1+Math.hypot(renderer.x - x,
+                                       renderer.y - y,
+                                       renderer.y - z))**2/200)
+        startSound('splode', vol)
       }
       
       const spawnSparks = (x, y, z) => {
@@ -886,6 +1006,9 @@ $file = <<<'FILE'
           }
         }
         if(!cont) return
+        
+        startSound('missile')
+        
         var x, y, z, roll, pitch, yaw
         if(player.ip){
           player = player.player
@@ -929,8 +1052,8 @@ $file = <<<'FILE'
           id: player.id,
           vx, vy, vz,
         }]
-        console.log('shooting missiles', actualPlayer)
         if(+player.id == +playerData.id) coms('sync.php', 'syncPlayers')
+        startSound('missile')
       }
 
       const fireChainguns = player => {
@@ -987,6 +1110,7 @@ $file = <<<'FILE'
           id: player.id,
           vx, vy, vz,
         }]
+        startSound('pew')
         //coms('sync.php', 'syncPlayers')
       }
       
@@ -1030,8 +1154,37 @@ $file = <<<'FILE'
       }
       
       const drawMenu = () => {
+        
         if(!gameLoaded) return
         var c = Coordinates.Overlay.c
+        var t = renderer.t
+        
+        
+        // radar warning
+        if(playerData.painted && (((t*60|0)%10) < 5)){
+          ctx.fillStyle = '#f04'
+          ctx.fillRect(0,0,c.width, c.height)
+          ctx.clearRect(100,100,c.width-200, c.height-200)
+        }
+        
+
+        if(playerData.al){
+          if(playerData.dm > .02){
+            ctx.globalAlpha = playerData.dm
+            ctx.drawImage(dmOverlay, 0, 0, c.width, c.height)
+            ctx.globalAlpha = 1
+          }else{
+            playerData.dm = 0
+          }
+          playerData.dm = Math.max(0, playerData.dm /= 1.02)
+        }else{
+          ctx.globalAlpha = playerData.dm = 1
+          scratchCanvas.Draw(skullShape)
+          ctx.drawImage(scratchCanvas.c, 0,0, c.width, c.height)
+          ctx.drawImage(dmDeadOverlay, 0, 0, c.width, c.height)
+          scratchCanvas.z = 32
+          skullShape.yaw += .02
+        }
 
         if(showMenu){
           
@@ -1115,24 +1268,6 @@ $file = <<<'FILE'
             ctx.drawImage(res, c.width * .9775 - w/2, c.height * .75 - h/2, w, h)
           }
         }
-        
-        if(playerData.al){
-          if(playerData.dm > .02){
-            ctx.globalAlpha = playerData.dm
-            ctx.drawImage(dmOverlay, 0, 0, c.width, c.height)
-            ctx.globalAlpha = 1
-          }else{
-            playerData.dm = 0
-          }
-          playerData.dm = Math.max(0, playerData.dm /= 1.02)
-        }else{
-          ctx.globalAlpha = playerData.dm = 1
-          scratchCanvas.Draw(skullShape)
-          ctx.drawImage(scratchCanvas.c, 0,0, c.width, c.height)
-          ctx.drawImage(dmDeadOverlay, 0, 0, c.width, c.height)
-          scratchCanvas.z = 32
-          skullShape.yaw += .02
-        }
       }
 
       window.Draw = async () => {
@@ -1142,6 +1277,9 @@ $file = <<<'FILE'
         
         playerData.fM = false
         playerData.fC = false
+        
+        console.log(renderer.flyMode, renderer.mspeed)
+        renderer.mspeed = renderer.flyMode ? 1e3 : 300
         
         playerData.gS = playerData.mCt > 0 ? 0 : 1
         
@@ -1254,8 +1392,51 @@ $file = <<<'FILE'
                 playerData.hl = 1
                 medkits[i].visible = false
                 medkits[i].t = t
+                startSound('powerup')
               }
               await renderer.Draw(medkitShape)
+            }
+          }
+        }
+
+        for(var i = 0; i<flightPowerups.length; i++){
+          if(flightPowerups[i].visible || t - flightPowerups[i].t > medkitRespawnSpeed){
+            if(t - flightPowerups[i].t > medkitRespawnSpeed) flightPowerups[i].visible = true
+            ax = ay = az = nax = nay = naz = 0            
+            var ax = flightPowerupShape.x = ((i%mfpucl)-mfpucl/2 + .5) * mfpusp
+            var az = flightPowerupShape.z = ((i/mfpucl/mfpurw|0)-mfpubr/2 + .5) * mfpusp
+            
+            var migx = 1e5
+            var migz = 1e5
+            while(ax + nax + renderer.x > migx) nax -= migx*2
+            while(ax + nax + renderer.x < -migx) nax += migx*2
+            while(az + naz + renderer.z > migz) naz -= migz*2
+            while(az + naz + renderer.z < -migz) naz += migz*2
+
+            flightPowerupShape.x += nax
+            flightPowerupShape.z += naz
+            flightPowerupShape.y = 3e4 + floor(flightPowerupShape.x, flightPowerupShape.z) + (((i/mfpucl|0)%mfpurw)-mfpurw/2 + .5) * mfpusp
+            var d = Math.hypot(-playerData.x - flightPowerupShape.x, 
+                           playerData.y - flightPowerupShape.y, 
+                          -playerData.z - flightPowerupShape.z)
+            if(d < 1e5){
+              if(d < 5e3){
+                renderer.flyMode = true
+                setTimeout(()=>{
+                  renderer.flyMode = false
+                }, flightTime * 1000)
+                playerData.hl = 1
+                flightPowerups[i].visible = false
+                flightPowerups[i].t = t
+                startSound('megaPowerup')
+              }
+              
+              flightPowerupShape.yaw = t * 2
+              await renderer.Draw(flightPowerupShape)
+              genericPowerupAura.x = flightPowerupShape.x
+              genericPowerupAura.y = flightPowerupShape.y
+              genericPowerupAura.z = flightPowerupShape.z
+              await renderer.Draw(genericPowerupAura)
             }
           }
         }
@@ -1275,6 +1456,7 @@ $file = <<<'FILE'
               var d = Math.hypot(-playerData.x - px, playerData.y - py, -playerData.z - pz)
               if(d < 2e4){
                 if(d < 2e3){
+                  startSound('powerup')
                   powerupAuras[o].nextRespawn = t + powerupRespawnSpeed
                   playerData.mCt += o+1
                 }else{
@@ -1287,7 +1469,7 @@ $file = <<<'FILE'
                     await renderer.Draw(powerup)
                     
                     thrusterPowerupShape.x = powerup.x
-                    thrusterPowerupShape.y = powerup.y -450
+                    thrusterPowerupShape.y = powerup.y -1e3
                     thrusterPowerupShape.z = powerup.z
                     await renderer.Draw(thrusterPowerupShape)
                   }
@@ -1518,6 +1700,8 @@ $file = <<<'FILE'
                                    missile.vx, missile.vy, missile.vz)
             return ret
           })
+          
+          playerData.painted = false
           missiles.map(async missile => {
 
             // heat-seeking
@@ -1529,14 +1713,18 @@ $file = <<<'FILE'
             var mind = 6e6
             var d, midx = -1
             players.map((player, idx) => {
-              if(+player.id != +missile.id &&
+              if(player.al && +player.id != +missile.id &&
                  (d=Math.hypot(mx + player.x, my - player.y, mz + player.z)) < mind){
                   mind = d
                   midx = idx
               }
             })
             if(midx != -1){
-              if(mind > missileSpeed * 1.25) {
+              if(players[midx].id == playerData.id){
+                startSound('radar warning')
+                playerData.painted = true
+              }
+              if(mind > missileSpeed * 1.5) {
                 var tx = -players[midx].x
                 var ty = players[midx].y
                 var tz = -players[midx].z
@@ -1563,7 +1751,6 @@ $file = <<<'FILE'
                 missile.vy = C(p2) * missileSpeed
                 missile.vz = -C(p1) * S(p2) * missileSpeed
               }else{
-                console.log('missile hit!')
                 missile.t = -missileLife
                 spawnSplosion(missile.x, missile.y, missile.z,
                               missile.vx, missile.vy, missile.vz)
@@ -1578,6 +1765,7 @@ $file = <<<'FILE'
                   }else{
                     playerData.dm += missileDamage * 4
                   }
+                  startSound('metal ' + ((Rn()*5+1) | 0))
                 }
               }
             }
@@ -1595,7 +1783,7 @@ $file = <<<'FILE'
               missileShape.yaw = missile.yaw
               await renderer.Draw(missileShape)
               
-              var offset = Coordinates.R_pyr(0, -5, -22, missile)
+              var offset = Coordinates.R_pyr(0, -5, -200, missile)
               thrusterShape.x = missile.x + offset[0]
               thrusterShape.y = missile.y + offset[1]
               thrusterShape.z = missile.z + offset[2]
@@ -1605,6 +1793,10 @@ $file = <<<'FILE'
               await renderer.Draw(thrusterShape)
             }
           })
+          
+          if(!playerData.painted){
+            stopSound('radar warning')
+          }
         }
 
         if(typeof bulletParticles != 'undefined'){
@@ -1633,6 +1825,7 @@ $file = <<<'FILE'
                     }else{
                       playerData.dm += chaingunDamage * 8
                     }
+                    startSound('metal ' + ((Rn()*5+1) | 0))
                   }
                 }
               }
@@ -1641,7 +1834,7 @@ $file = <<<'FILE'
             l[idx*3+0] = bullet.x += bullet.vx
             l[idx*3+1] = bullet.y += bullet.vy
             l[idx*3+2] = bullet.z += bullet.vz
-            if(bullet.y < floor(bullet.x, bullet.z)){
+            if(bullet.y + bullet.vy * 2  < floor(bullet.x + bullet.vx*2, bullet.z + bullet.vz*2)){
               bullet.t = -chaingunLife
               if(Rn() < .33) spawnSparks(bullet.x, bullet.y, bullet.z)
             }
@@ -1755,9 +1948,10 @@ $file = <<<'FILE'
               v.x               = player.x
               v.y               = player.y
               v.z               = player.z
+              v.yaw             = player.yaw
               v.roll            = player.roll
               v.pitch           = player.pitch
-              v.yaw             = player.yaw
+              v.painted         = player.painted
               v.keep            = true
             }else{
               var newObj = {
@@ -1780,6 +1974,7 @@ $file = <<<'FILE'
               newObj.hl                = player.hl
               newObj.name              = player.name
               newObj.id                = +player.id
+              newObj.painted           = player.painted
               newObj.x                 = newObj.ix     = player.x
               newObj.y                 = newObj.iy     = player.y
               newObj.z                 = newObj.iz     = player.z
@@ -1847,7 +2042,7 @@ $file = <<<'FILE'
           if(callback) eval(callback + '(data)')
         })
       }
-      
+
       const gameSync = () => {
         playerData.x = renderer.x
         playerData.y = -renderer.y
@@ -1904,6 +2099,7 @@ $file = <<<'FILE'
           playerData.fC = false
           playerData.ip = false
           playerData.dm = 0
+          playerData.painted = false
         }
       }
 
