@@ -103,7 +103,7 @@
         //return  Math.min(1.125, Math.max(0,C(X/Math.PI/2500) + C(Z/Math.PI/2500))) * 1e4
 
         // level 2 (?)
-        // return  -Math.hypot(X, Z) 
+         return  -Math.hypot(X, Z) 
         
         // level 3 (?)
         //return Math.min(8, Math.max(-.25, (S(X/2e3+renderer.t/8) * S(Z/2e3) + S(X/2500) * S(Z/2500+renderer.t * 3 / 8)) ** 3)) * 2e3
@@ -112,8 +112,9 @@
         //var d = Math.hypot(X, Z)
         //return Math.min(500, Math.max(-1e6, (C(Math.PI / 1e5 * X) + C(Math.PI / 1e5 * Z))* 5e4))
 
-        var d = Math.hypot(X, Z)
-        return Math.max(-500, Math.min(1e6, (C(Math.PI / 1e5 * X) + C(Math.PI / 1e5 * Z))* 5e4))
+        // level 4 (?)
+        //var d = Math.hypot(X, Z)
+        //return Math.max(-500, Math.min(1e6, (C(Math.PI / 1e5 * X) + C(Math.PI / 1e5 * Z))* 5e4))
       }
 
       var X, Y, Z
@@ -451,9 +452,9 @@
           url: './birdship.json',
           map: './birdship.png',
           name: 'bird ship',
-          scaleX: 10,
-          scaleY: 10,
-          scaleZ: 10,
+          scaleX: 50,
+          scaleY: 50,
+          scaleZ: 50,
           rotationMode: 1,
           colorMix: 0,
         }
@@ -466,7 +467,7 @@
           shapeType: 'sprite',
           map: 'https://srmcgann.github.io/Coordinates/resources/stars/megastar.png',
           name: 'muzzle flair',
-          size: 5,
+          size: 10,
           rotationMode: 1,
         }
         if(1){
@@ -621,9 +622,9 @@
           url: './guns.json',
           map: './birdship.png',
           name: 'gun shape',
-          scaleX: 10,
-          scaleY: 10,
-          scaleZ: 10,
+          scaleX: 50,
+          scaleY: 50,
+          scaleZ: 50,
           size: 1,
           rotationMode: 1,
           colorMix: 0,
@@ -638,9 +639,9 @@
           url: './chainguns.json',
           map: './birdship.png',
           name: 'chainguns',
-          scaleX: 10,
-          scaleY: 10,
-          scaleZ: 10,
+          scaleX: 50,
+          scaleY: 50,
+          scaleZ: 50,
           size: 1,
           rotationMode: 1,
           colorMix: 0,
@@ -672,9 +673,9 @@
           name: 'bullet',
           rotationMode: 1,
           colorMix: 0,
-          scaleX: 10,
-          scaleY: 10,
-          scaleZ: 10,
+          scaleX: 50,
+          scaleY: 50,
+          scaleZ: 50,
           size: 1,
         }
         if(0) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
@@ -1048,12 +1049,12 @@
         var vz = -C(p1) * S(p2) * missileSpeed
         player.mA = !player.mA
         
-        var offset = Coordinates.R_pyr(350 * (player.mA ? -1: 1), -100, 0, player)
+        var offset = Coordinates.R_pyr(350 * (player.mA ? -5: 5), -500, 0, player)
         if(+player.id != +playerData.id) spawnFlash(-x + offset[0],
                                                      y + offset[1],
                                                      -z + offset[2], .5)
         
-        offset = Coordinates.R_pyr(350 * (player.mA ? -1: 1), 0, 0, player)
+        offset = Coordinates.R_pyr(350 * (player.mA ? -5: 5), 0, 0, player)
         
         missiles = [...missiles, {
           x: -x + offset[0],
@@ -1106,12 +1107,12 @@
         var vz = -C(p1) * S(p2) * chaingunSpeed
         player.cA = !player.cA
         
-        var offset = Coordinates.R_pyr(200 * (player.cA ? -1: 1), -100, 0, player)
+        var offset = Coordinates.R_pyr(200 * (player.cA ? -5: 5), -500, 0, player)
         if(+player.id != +playerData.id) spawnFlash(-x + offset[0],
                                                      y + offset[1],
                                                     -z + offset[2], .25)
 
-        offset = Coordinates.R_pyr(200 * (player.cA ? -1: 1), 0, 0, player)
+        offset = Coordinates.R_pyr(200 * (player.cA ? -5: 5), 0, 0, player)
         bullets = [...bullets, {
           x: -x + offset[0],
           y: y + offset[1],
