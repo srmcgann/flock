@@ -254,9 +254,9 @@
           resource: new Audio('./pew.ogg'),
           loop: false, volume: .25},
         { name: 'splode',
-          url: './splode.ogg',
-          resource: new Audio('./splode.ogg'),
-          loop: false, volume: .5},
+          url: './splode.ogg?2',
+          resource: new Audio('./splode.ogg?2'),
+          loop: false, volume: 2},
         { name: 'powerup',
           url: './upgrade.ogg',
           resource: new Audio('./upgrade.ogg'),
@@ -283,6 +283,7 @@
       })
       
       const startSound = (soundName, volume=1) => {
+        console.log('starting sound: ' + soundName)
         if(!navigator.userActivation.hasBeenActive) return
         var sound = sounds.filter(v=>v.name == soundName)
         if(sound.length){
@@ -292,7 +293,7 @@
               resource.currentTime = 0
               resource.pause()
             }
-            resource.volume = sound[0].volume * volume
+            resource.volume = Math.min(1, Math.max(0, sound[0].volume * volume))
             resource.play()
           }
         }
@@ -308,7 +309,6 @@
       }
 
       var launch = async (width, height) => {
-        startSound('music')
         var ar = width / height
         width = Math.min(1e3, width)
         height = width / ar
@@ -981,8 +981,7 @@
         splosions = [...splosions, {x, y, z, data, age: 1}]
         var vol = 1 / (1+(1+Math.hypot(renderer.x + x,
                                        renderer.y - y,
-                                       renderer.z + z))**2/200000000)
-        console.log('starting sound with vol:', vol)
+                                       renderer.z + z))**2/500000000)
         startSound('splode', vol)
       }
       
@@ -1065,7 +1064,6 @@
           vx, vy, vz,
         }]
         if(+player.id == +playerData.id) coms('sync.php', 'syncPlayers')
-        startSound('missile')
       }
 
       const fireChainguns = player => {
@@ -1282,10 +1280,16 @@
         }
       }
 
+      var soundtrackPlaying = false
       window.Draw = async () => {
         if(!gameLoaded) return
         var t = renderer.t
         gameSync()
+        
+        if(!soundtrackPlaying) {
+          soundtrackPlaying = true
+          startSound('music')
+        }
         
         playerData.fM = false
         playerData.fC = false
