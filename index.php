@@ -257,6 +257,9 @@
         { name: 'music',
           resource: new Audio('./colossus.mp3'),
           loop: true, volume: .2},
+        { name: 'missile',
+          resource: new Audio('./missile.ogg'),
+          loop: false, volume: .5},
       ]
       
       sounds.map(sound => {
