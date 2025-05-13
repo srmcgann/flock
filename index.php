@@ -156,7 +156,7 @@
       var missileSpeed             = 1e3
       var missileLife              = 6
       var cST                      = 0
-      var cSTInterval              = .01
+      var cSTInterval              = .05
       var chaingunSpeed            = 2e3
       var chaingunLife             = 6
       var smokeLife                = 5
@@ -229,19 +229,28 @@
           loop: true, volume: .25},
         { name: 'metal 1',
           resource: new Audio('./metal1.ogg'),
-          loop: true, volume: .5},
+          loop: false, volume: .5},
         { name: 'metal 2',
           resource: new Audio('./metal2.ogg'),
-          loop: true, volume: .5},
+          loop: false, volume: .5},
         { name: 'metal 3',
           resource: new Audio('./metal3.ogg'),
-          loop: true, volume: .5},
+          loop: false, volume: .5},
         { name: 'metal 4',
           resource: new Audio('./metal4.ogg'),
-          loop: true, volume: .5},
+          loop: false, volume: .5},
         { name: 'metal 5',
           resource: new Audio('./metal5.ogg'),
-          loop: true, volume: .5},
+          loop: false, volume: .5},
+        { name: 'pew',
+          resource: new Audio('./pew.ogg'),
+          loop: false, volume: .25},
+        { name: 'splode',
+          resource: new Audio('./splode.ogg'),
+          loop: false, volume: .5},
+        { name: 'powerup',
+          resource: new Audio('./upgrade.ogg'),
+          loop: false, volume: .5},
       ]
       
       sounds.map(sound => {
@@ -255,7 +264,13 @@
         var sound = sounds.filter(v=>v.name == soundName)
         if(sound.length){
           var resource = sound[0].resource
-          if(resource.paused) resource.play()
+          if(resource.paused || !sound[0].loop){
+            if(!sound[0].loop) {
+              resource.currentTime = 0
+              resource.pause()
+            }
+            resource.play()
+          }
         }
       }
 
@@ -939,6 +954,7 @@
           return v
         })
         splosions = [...splosions, {x, y, z, data, age: 1}]
+        startSound('splode')
       }
       
       const spawnSparks = (x, y, z) => {
@@ -973,6 +989,9 @@
           }
         }
         if(!cont) return
+        
+        startSound('missile')
+        
         var x, y, z, roll, pitch, yaw
         if(player.ip){
           player = player.player
@@ -1073,6 +1092,7 @@
           id: player.id,
           vx, vy, vz,
         }]
+        startSound('pew')
         //coms('sync.php', 'syncPlayers')
       }
       
@@ -1416,6 +1436,7 @@
               var d = Math.hypot(-playerData.x - px, playerData.y - py, -playerData.z - pz)
               if(d < 2e4){
                 if(d < 2e3){
+                  startSound('powerup')
                   powerupAuras[o].nextRespawn = t + powerupRespawnSpeed
                   playerData.mCt += o+1
                 }else{
@@ -1724,6 +1745,7 @@
                   }else{
                     playerData.dm += missileDamage * 4
                   }
+                  startSound('metal ' + ((Rn()*5+1) | 0))
                 }
               }
             }
@@ -1783,6 +1805,7 @@
                     }else{
                       playerData.dm += chaingunDamage * 8
                     }
+                    startSound('metal ' + ((Rn()*5+1) | 0))
                   }
                 }
               }
