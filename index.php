@@ -1,7 +1,7 @@
 <!--
   to-do:
-    * sound efx / music w/mute-button
-    * item/track tile movement -> x2 scale
+    ✔ sound efx / music w/mute-button
+    ✔ item/track tile movement -> x2 scale
     * levels / arenas w/ selection menu
     * load-time optimizations (pre-resize everything)
     * 'sessions' engine w/ max players
@@ -98,20 +98,22 @@
       var Rn = Math.random
     
       const floor = (X, Z) => {
+        
+        // level 1 (?)
+        //return  Math.min(1.125, Math.max(0,C(X/Math.PI/2500) + C(Z/Math.PI/2500))) * 1e4
+
+        // level 2 (?)
+        // return  -Math.hypot(X, Z) 
+        
+        // level 3 (?)
         //return Math.min(8, Math.max(-.25, (S(X/2e3+renderer.t/8) * S(Z/2e3) + S(X/2500) * S(Z/2500+renderer.t * 3 / 8)) ** 3)) * 2e3
         
-        /*
-        var d = Math.hypot(X, Z) 
-        var p = Math.atan2(X, Z) + renderer.t / 4
-        return  Math.min(.66, Math.max(-.25, C(d/1e3+S(p*3)))) * 1e4
-        */
+        // level 4 (?)
+        //var d = Math.hypot(X, Z)
+        //return Math.min(500, Math.max(-1e6, (C(Math.PI / 1e5 * X) + C(Math.PI / 1e5 * Z))* 5e4))
 
-        /*
-        var d = Math.hypot(X, Z) 
-        return  -d
-        */
-        
-        return  Math.min(1.125, Math.max(0,C(X/Math.PI/2500) + C(Z/Math.PI/2500))) * 1e4
+        var d = Math.hypot(X, Z)
+        return Math.max(-500, Math.min(1e6, (C(Math.PI / 1e5 * X) + C(Math.PI / 1e5 * Z))* 5e4))
       }
 
       var X, Y, Z
@@ -434,8 +436,8 @@
           shapeType: 'particles',
           name: 'smoke particles',
           geometryData,
-          size: 150,
-          alpha: .4,
+          size: 200,
+          alpha: .5,
           penumbra: .3,
           color: 0xeecc88,
         }
@@ -692,7 +694,7 @@
           scaleUVY: 6,
           map: refTexture,
         }
-        if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
+        if(0) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           shapes.push(geometry)
           await backgroundShader.ConnectGeometry(geometry)
         }) 
@@ -819,8 +821,8 @@
           shapeType: 'particles',
           name: 'bullet particles',
           geometryData,
-          size: 50,
-          alpha: .7,
+          size: 150,
+          alpha: .8,
           penumbra: .5,
           color: 0x44ffcc,
         }
@@ -1053,7 +1055,6 @@
         
         offset = Coordinates.R_pyr(350 * (player.mA ? -1: 1), 0, 0, player)
         
-        
         missiles = [...missiles, {
           x: -x + offset[0],
           y: y + offset[1],
@@ -1171,7 +1172,7 @@
         
         
         // radar warning
-        if(playerData.painted && (((t*60|0)%10) < 5)){
+        if(playerData.pntd && (((t*60|0)%10) < 5)){
           ctx.fillStyle = '#f04'
           ctx.fillRect(0,0,c.width, c.height)
           ctx.clearRect(100,100,c.width-200, c.height-200)
@@ -1288,7 +1289,7 @@
         
         if(!soundtrackPlaying) {
           soundtrackPlaying = true
-          startSound('music')
+          //startSound('music')
         }
         
         playerData.fM = false
@@ -1330,7 +1331,7 @@
             }
           })
         }
-        
+
         var fl = -floor(-renderer.x, -renderer.z) - 1e3
         if(renderer.flyMode){
           if(renderer.y >= fl){
@@ -1360,7 +1361,7 @@
           
           playervy += grav
           renderer.y += playervy
-          if(renderer.y > fl - 20){
+          if(renderer.y > fl - 400){
             renderer.y = fl
             playervy = 0
             renderer.hasTraction = true
@@ -1389,8 +1390,8 @@
             var ax = medkitShape.x = ((i%mcl)-mcl/2 + .5) * msp
             var az = medkitShape.z = ((i/mcl/mrw|0)-mbr/2 + .5) * msp
             
-            var migx = 1e5
-            var migz = 1e5
+            var migx = 2e5
+            var migz = 2e5
             while(ax + nax + renderer.x > migx) nax -= migx*2
             while(ax + nax + renderer.x < -migx) nax += migx*2
             while(az + naz + renderer.z > migz) naz -= migz*2
@@ -1421,8 +1422,8 @@
             var ax = flightPowerupShape.x = ((i%mfpucl)-mfpucl/2 + .5) * mfpusp
             var az = flightPowerupShape.z = ((i/mfpucl/mfpurw|0)-mfpubr/2 + .5) * mfpusp
             
-            var migx = 1e5
-            var migz = 1e5
+            var migx = 2e5
+            var migz = 2e5
             while(ax + nax + renderer.x > migx) nax -= migx*2
             while(ax + nax + renderer.x < -migx) nax += migx*2
             while(az + naz + renderer.z > migz) naz -= migz*2
@@ -1434,7 +1435,7 @@
             var d = Math.hypot(-playerData.x - flightPowerupShape.x, 
                            playerData.y - flightPowerupShape.y, 
                           -playerData.z - flightPowerupShape.z)
-            if(d < 1e5){
+            if(d < 2e5){
               if(d < 5e3){
                 renderer.flyMode = true
                 setTimeout(()=>{
@@ -1635,8 +1636,8 @@
         var ax = weaponsTrackShape.x
         var az = weaponsTrackShape.z
         
-        var migx = 1e5
-        var migz = 1e5
+        var migx = 2e5
+        var migz = 2e5
         while(ax + nax + renderer.x > migx) nax -= migx*2
         while(ax + nax + renderer.x < -migx) nax += migx*2
         while(az + naz + renderer.z > migz) naz -= migz*2
@@ -1716,7 +1717,7 @@
             return ret
           })
           
-          playerData.painted = false
+          playerData.pntd = false
           missiles.map(async missile => {
 
             // heat-seeking
@@ -1737,7 +1738,7 @@
             if(midx != -1){
               if(players[midx].id == playerData.id){
                 startSound('radar warning')
-                playerData.painted = true
+                playerData.pntd = true
               }
               if(mind > missileSpeed * 1.5) {
                 var tx = -players[midx].x
@@ -1804,7 +1805,7 @@
             }
           })
           
-          if(!playerData.painted){
+          if(!playerData.pntd){
             stopSound('radar warning')
           }
         }
@@ -1912,7 +1913,7 @@
 
       // db sync
       //const URLbase = 'http://52.207.184.99/flock'
-      const URLbase = 'https://bosstools.mooo.com/flock'
+      const URLbase = 'https://boss.veriler.com/flock'
       
       const syncPlayers = data => {
         var tPlayers = structuredClone(players)
@@ -1961,7 +1962,7 @@
               v.yaw             = player.yaw
               v.roll            = player.roll
               v.pitch           = player.pitch
-              v.painted         = player.painted
+              v.pntd            = player.pntd
               v.keep            = true
             }else{
               var newObj = {
@@ -1984,7 +1985,7 @@
               newObj.hl                = player.hl
               newObj.name              = player.name
               newObj.id                = +player.id
-              newObj.painted           = player.painted
+              newObj.pntd              = player.pntd
               newObj.x                 = newObj.ix     = player.x
               newObj.y                 = newObj.iy     = player.y
               newObj.z                 = newObj.iz     = player.z
@@ -2109,7 +2110,7 @@
           playerData.fC = false
           playerData.ip = false
           playerData.dm = 0
-          playerData.painted = false
+          playerData.pntd = false
         }
       }
 
