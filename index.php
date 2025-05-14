@@ -175,6 +175,7 @@
       var maxPlayerVel = 200
       var maxMissiles = 50
       var level = 1
+      var arena
 
       const updateURL = (param, value) => {
         var params = location.href.split('?')
@@ -190,12 +191,27 @@
         history.replaceState({}, document.title, newURL)
       }
 
+      const pruneURL = param => {
+        var ret = location.href
+        var params = ret.split('?')
+        if(params.length > 1){
+          var parts = params[1].split('&').filter(v=>v.indexOf(param)==-1).join('&')
+          ret = location.origin + location.pathname + (parts ? '?' : '') + parts
+          history.replaceState({}, document.title, ret)
+        }
+      }
+
       var l = location.href.toLowerCase().split('level=')
       if(l.length>1){
-        level = (+location.href.split('level=')[1].split('&')[0])
+        level = +location.href.split('level=')[1].split('&')[0]
       }
-      updateURL('level', level)
+      //updateURL('level', level)
 
+      var l = location.href.toLowerCase().split('arena=')
+      if(l.length>1){
+        arena = (+location.href.split('arena=')[1].split('&')[0])
+      }
+      
       var refTexture
       var floorMap
       switch(level){
@@ -303,8 +319,8 @@
           resource: new Audio('./metal5.ogg'),
           loop: false, volume: .35},
         { name: 'pew',
-          url: './pew.ogg',
-          resource: new Audio('./pew.ogg'),
+          url: './pew.ogg?2',
+          resource: new Audio('./pew.ogg?2'),
           loop: false, volume: .25},
         { name: 'splode',
           url: './splode.ogg?2',
@@ -1998,6 +2014,8 @@
               //l[0].name  = player.name
               //l[0].id    = player.id
               var v = l[0]
+              v.ar              = player.ar
+              v.lv              = player.lv
               v.al              = player.al
               v.dm              = player.dm
               v.hM              = player.hM
@@ -2029,6 +2047,8 @@
               newObj.cA                = false
               newObj.dm                = player.dm
               newObj.al                = player.al
+              newObj.ar                = player.ar
+              newObj.lv                = player.lv
               newObj.hM                = player.hM
               newObj.hC                = player.hC
               newObj.mST               = player.mST
@@ -2061,12 +2081,17 @@
       const launchLocalClient = data => {
         playerData = data
         playerData.id = +playerData.id
+        arena = playerData.ar
+        console.log(playerData)
+        level = +playerData.lv
         
         var pn = location.href.split('name=')
         if(pn.length>1){
           pn = pn[1].split('&')[0]
           playerData.name = playerName.value = decodeURIComponent(pn)
         } else {
+          pruneURL('level')
+          updateURL('arena', playerData.ar)
           playerName.value = playerData.name
           updatePlayerName()
         }
@@ -2132,6 +2157,8 @@
             gS: 0, mCt: 0,
             roll: 0, pitch: 0, yaw: 0,
             mST: 0, cST: 0,
+            ar: arena,
+            lv: level,
             hM: true,
             hC: true,
             fM: false,
@@ -2153,6 +2180,8 @@
           playerData.ip = false
           playerData.dm = 0
           playerData.pntd = false
+          playerData.ar = arena
+          playerData.lv = level
         }
       }
 
