@@ -1965,8 +1965,7 @@
       launch(renderer.width, renderer.height)
 
       // db sync
-      //const URLbase = 'http://52.207.184.99/flock'
-      const URLbase = 'https://boss.veriler.com/flock'
+      const URLbase = location.origin + location.pathname
       
       const syncPlayers = data => {
         var tPlayers = structuredClone(players)
