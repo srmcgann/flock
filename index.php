@@ -319,8 +319,8 @@
           resource: new Audio('./megaUpgrade.ogg'),
           loop: false, volume: .5},
         { name: 'music',
-          url: './colossus.mp3',
-          resource: new Audio('./colossus.mp3'),
+          url: './ambientLoop.mp3',
+          resource: new Audio('./ambientLoop.mp3'),
           loop: true, volume: .2},
         { name: 'missile',
           url: './missile.ogg',
@@ -1340,7 +1340,7 @@
         
         if(!soundtrackPlaying) {
           soundtrackPlaying = true
-          //startSound('music')
+          startSound('music')
         }
         
         playerData.fM = false
