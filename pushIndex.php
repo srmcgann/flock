@@ -2,12 +2,14 @@
 $file = <<<'FILE'
 <!--
   to-do:
-    * sound efx / music w/mute-button
-    * item/track tile movement -> x2 scale
+    ✔ sound efx / music w/mute-button
+    ✔ item/track tile movement -> x2 scale
     * levels / arenas w/ selection menu
     * load-time optimizations (pre-resize everything)
     * 'sessions' engine w/ max players
+    * join-link w/ copy button
 -->
+
 <!DOCTYPE html>
 <html>
   <head>
@@ -99,20 +101,25 @@ $file = <<<'FILE'
       var Rn = Math.random
     
       const floor = (X, Z) => {
-        //return Math.min(8, Math.max(-.25, (S(X/2e3+renderer.t/8) * S(Z/2e3) + S(X/2500) * S(Z/2500+renderer.t * 3 / 8)) ** 3)) * 2e3
-        
-        /*
-        var d = Math.hypot(X, Z) 
-        var p = Math.atan2(X, Z) + renderer.t / 4
-        return  Math.min(.66, Math.max(-.25, C(d/1e3+S(p*3)))) * 1e4
-        */
-
-        /*
-        var d = Math.hypot(X, Z) 
-        return  -d
-        */
-        
-        return  Math.min(1.125, Math.max(0,C(X/Math.PI/2500) + C(Z/Math.PI/2500))) * 1e4
+        switch(level){
+          case 1:
+            return  Math.min(1.125, Math.max(0,C(X/Math.PI/2500) + C(Z/Math.PI/2500))) * 1e4
+          break
+          case 2:
+            return  -Math.hypot(X, Z) 
+          break
+          case 3:
+            return Math.min(8, Math.max(-.25, (S(X/2e3+renderer.t/8) * S(Z/2e3) + S(X/2500) * S(Z/2500+renderer.t * 3 / 8)) ** 3)) * 2e3
+          break
+          case 4:
+            var d = Math.hypot(X, Z)
+            return Math.min(500, Math.max(-1e6, (C(Math.PI / 1e5 * X) + C(Math.PI / 1e5 * Z))* 5e4))
+          break
+          case 5:
+            var d = Math.hypot(X, Z)
+            return Math.max(-500, Math.min(1e6, (C(Math.PI / 1e5 * X) + C(Math.PI / 1e5 * Z))* 5e4))
+          break
+        }
       }
 
       var X, Y, Z
@@ -168,11 +175,58 @@ $file = <<<'FILE'
       var flightPowerupRespawnSpeed = 20
       var flightTime = 50
       var maxPlayerVel = 200
+      var maxMissiles = 50
+      var level = 1
 
-      //var refTexture = './equisky3.jpg'
-      var refTexture = './pseudoEquirectangular_3.jpg'
-      var heightMap = 'https://srmcgann.github.io/Coordinates/resources/bumpmap_equirectangular_po2.jpg'
-      var floorMap = './floorCircuitry.jpg'
+      const updateURL = (param, value) => {
+        var params = location.href.split('?')
+        if(params.length > 1){
+          params = params[1].split('&').filter(v=>{
+            return v.toLowerCase().indexOf(param + '=') == -1
+          }).join('&')
+          params = '?'+param+'=' + value + (params ? '&' : '') + params
+        }else{
+          params = '?'+param+'=' + value
+        }
+        var newURL = location.href.split('?')[0] + params
+        history.replaceState({}, document.title, newURL)
+      }
+
+      var l = location.href.toLowerCase().split('level=')
+      if(l.length>1){
+        level = (+location.href.split('level=')[1].split('&')[0])
+      }
+      updateURL('level', level)
+
+      var refTexture
+      var floorMap
+      switch(level){
+        case 1:
+          refTexture = './equisky3.jpg'
+          floorMap = './floorCircuitry.jpg'
+        break
+        case 2:
+          refTexture = './pseudoEquirectangular_3.jpg'
+          floorMap = './floorCircuitry.jpg'
+        break
+        case 3:
+          refTexture = './equisky3.jpg'
+          floorMap = './floorCircuitry2.jpg'
+        break
+        case 4:
+          refTexture = './pseudoEquirectangular_3.jpg'
+          floorMap = './floorCircuitry3.jpg'
+        break
+        case 5:
+          refTexture = './equisky3.jpg'
+          floorMap = './floorCircuitry2.jpg'
+        break
+        //case 6:
+        //  refTexture = './pseudoEquirectangular_3.jpg'
+        //  floorMap = './floorCircuitry.jpg'
+        //break
+      }
+      
       
       var dmOverlay = new Image()
       dmOverlay.src = './damage.png'
@@ -227,39 +281,51 @@ $file = <<<'FILE'
       
       var sounds = [
         { name: 'radar warning',
+          url: './radarWarning.mp3',
           resource: new Audio('./radarWarning.mp3'),
           loop: true, volume: .3},
         { name: 'metal 1',
+          url: './metal1.ogg',
           resource: new Audio('./metal1.ogg'),
           loop: false, volume: .35},
         { name: 'metal 2',
+          url: './metal2.ogg',
           resource: new Audio('./metal2.ogg'),
           loop: false, volume: .35},
         { name: 'metal 3',
+          url: './metal3.ogg',
           resource: new Audio('./metal3.ogg'),
           loop: false, volume: .35},
         { name: 'metal 4',
+          url: './metal4.ogg',
           resource: new Audio('./metal4.ogg'),
           loop: false, volume: .35},
         { name: 'metal 5',
+          url: './metal5.ogg',
           resource: new Audio('./metal5.ogg'),
           loop: false, volume: .35},
         { name: 'pew',
+          url: './pew.ogg',
           resource: new Audio('./pew.ogg'),
           loop: false, volume: .25},
         { name: 'splode',
-          resource: new Audio('./splode.ogg'),
-          loop: false, volume: .5},
+          url: './splode.ogg?2',
+          resource: new Audio('./splode.ogg?2'),
+          loop: false, volume: 10},
         { name: 'powerup',
+          url: './upgrade.ogg',
           resource: new Audio('./upgrade.ogg'),
           loop: false, volume: .5},
         { name: 'megaPowerup',
+          url: './megaUpgrade.ogg',
           resource: new Audio('./megaUpgrade.ogg'),
           loop: false, volume: .5},
         { name: 'music',
+          url: './colossus.mp3',
           resource: new Audio('./colossus.mp3'),
           loop: true, volume: .2},
         { name: 'missile',
+          url: './missile.ogg',
           resource: new Audio('./missile.ogg'),
           loop: false, volume: .5},
       ]
@@ -272,16 +338,17 @@ $file = <<<'FILE'
       })
       
       const startSound = (soundName, volume=1) => {
+        console.log('starting sound: ' + soundName)
         if(!navigator.userActivation.hasBeenActive) return
         var sound = sounds.filter(v=>v.name == soundName)
         if(sound.length){
-          var resource = sound[0].resource
+          var resource = sound[0].loop ? sound[0].resource : new Audio(sound[0].url)
           if(resource.paused || !sound[0].loop){
             if(!sound[0].loop) {
               resource.currentTime = 0
               resource.pause()
             }
-            resource.volume = sound[0].volume * volume
+            resource.volume = Math.min(1, Math.max(0, sound[0].volume * volume))
             resource.play()
           }
         }
@@ -297,7 +364,6 @@ $file = <<<'FILE'
       }
 
       var launch = async (width, height) => {
-        startSound('music')
         var ar = width / height
         width = Math.min(1e3, width)
         height = width / ar
@@ -423,8 +489,8 @@ $file = <<<'FILE'
           shapeType: 'particles',
           name: 'smoke particles',
           geometryData,
-          size: 150,
-          alpha: .4,
+          size: 200,
+          alpha: .5,
           penumbra: .3,
           color: 0xeecc88,
         }
@@ -438,9 +504,9 @@ $file = <<<'FILE'
           url: './birdship.json',
           map: './birdship.png',
           name: 'bird ship',
-          scaleX: 10,
-          scaleY: 10,
-          scaleZ: 10,
+          scaleX: 50,
+          scaleY: 50,
+          scaleZ: 50,
           rotationMode: 1,
           colorMix: 0,
         }
@@ -453,7 +519,7 @@ $file = <<<'FILE'
           shapeType: 'sprite',
           map: 'https://srmcgann.github.io/Coordinates/resources/stars/megastar.png',
           name: 'muzzle flair',
-          size: 5,
+          size: 10,
           rotationMode: 1,
         }
         if(1){
@@ -608,9 +674,9 @@ $file = <<<'FILE'
           url: './guns.json',
           map: './birdship.png',
           name: 'gun shape',
-          scaleX: 10,
-          scaleY: 10,
-          scaleZ: 10,
+          scaleX: 50,
+          scaleY: 50,
+          scaleZ: 50,
           size: 1,
           rotationMode: 1,
           colorMix: 0,
@@ -625,9 +691,9 @@ $file = <<<'FILE'
           url: './chainguns.json',
           map: './birdship.png',
           name: 'chainguns',
-          scaleX: 10,
-          scaleY: 10,
-          scaleZ: 10,
+          scaleX: 50,
+          scaleY: 50,
+          scaleZ: 50,
           size: 1,
           rotationMode: 1,
           colorMix: 0,
@@ -659,9 +725,9 @@ $file = <<<'FILE'
           name: 'bullet',
           rotationMode: 1,
           colorMix: 0,
-          scaleX: 10,
-          scaleY: 10,
-          scaleZ: 10,
+          scaleX: 50,
+          scaleY: 50,
+          scaleZ: 50,
           size: 1,
         }
         if(0) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
@@ -731,8 +797,6 @@ $file = <<<'FILE'
           fipNormals: true,
           //pitch: Math.PI,
           map: floorMap,
-          //heightMap,
-          //heightMapIntensity: 50,
           playbackSpeed: 1
         }
         if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
@@ -808,8 +872,8 @@ $file = <<<'FILE'
           shapeType: 'particles',
           name: 'bullet particles',
           geometryData,
-          size: 50,
-          alpha: .7,
+          size: 150,
+          alpha: .8,
           penumbra: .5,
           color: 0x44ffcc,
         }
@@ -956,21 +1020,23 @@ $file = <<<'FILE'
       const spawnSplosion = (x, y, z, vx, vy, vz) => {
         spawnSparks(x, y, z)
         var fl = floor(x, z)
-        if(Math.abs(y - fl < 20)) y = fl - 55
+        if(Math.abs(y - fl < 20)) y = fl + 55
         spawnFlash(x, y, z, 3)
         vx = (vx/3) //** 3 / 5
         vy = (vy/3) //** 3 / 5
         vz = (vz/3) //** 3 / 5
         var data = structuredClone(baseSplosion).map(v=>{
-          v[3] += vx
-          v[4] += vy
-          v[5] += vz
+          var d = Math.hypot(vx, vy, vz)
+          var rv = Rn() * d
+          v[3] += vx / d * rv
+          v[4] += vy / d * rv
+          v[5] += vz / d * rv
           return v
         })
         splosions = [...splosions, {x, y, z, data, age: 1}]
-        var vol = 1 / (1+(1+Math.hypot(renderer.x - x,
+        var vol = 1 / (1+(1+Math.hypot(renderer.x + x,
                                        renderer.y - y,
-                                       renderer.y - z))**2/200)
+                                       renderer.z + z))**2/300000000)
         startSound('splode', vol)
       }
       
@@ -1035,13 +1101,12 @@ $file = <<<'FILE'
         var vz = -C(p1) * S(p2) * missileSpeed
         player.mA = !player.mA
         
-        var offset = Coordinates.R_pyr(350 * (player.mA ? -1: 1), -100, 0, player)
+        var offset = Coordinates.R_pyr(350 * (player.mA ? -5: 5), -500, 0, player)
         if(+player.id != +playerData.id) spawnFlash(-x + offset[0],
                                                      y + offset[1],
                                                      -z + offset[2], .5)
         
-        offset = Coordinates.R_pyr(350 * (player.mA ? -1: 1), 0, 0, player)
-        
+        offset = Coordinates.R_pyr(350 * (player.mA ? -5: 5), 0, 0, player)
         
         missiles = [...missiles, {
           x: -x + offset[0],
@@ -1053,7 +1118,6 @@ $file = <<<'FILE'
           vx, vy, vz,
         }]
         if(+player.id == +playerData.id) coms('sync.php', 'syncPlayers')
-        startSound('missile')
       }
 
       const fireChainguns = player => {
@@ -1095,12 +1159,12 @@ $file = <<<'FILE'
         var vz = -C(p1) * S(p2) * chaingunSpeed
         player.cA = !player.cA
         
-        var offset = Coordinates.R_pyr(200 * (player.cA ? -1: 1), -100, 0, player)
+        var offset = Coordinates.R_pyr(200 * (player.cA ? -5: 5), -500, 0, player)
         if(+player.id != +playerData.id) spawnFlash(-x + offset[0],
                                                      y + offset[1],
                                                     -z + offset[2], .25)
 
-        offset = Coordinates.R_pyr(200 * (player.cA ? -1: 1), 0, 0, player)
+        offset = Coordinates.R_pyr(200 * (player.cA ? -5: 5), 0, 0, player)
         bullets = [...bullets, {
           x: -x + offset[0],
           y: y + offset[1],
@@ -1161,10 +1225,10 @@ $file = <<<'FILE'
         
         
         // radar warning
-        if(playerData.painted && (((t*60|0)%10) < 5)){
+        if(playerData.pntd && (((t*60|0)%10) < 5)){
           ctx.fillStyle = '#f04'
           ctx.fillRect(0,0,c.width, c.height)
-          ctx.clearRect(100,100,c.width-200, c.height-200)
+          ctx.clearRect(20,20,c.width-40, c.height-40)
         }
         
 
@@ -1270,15 +1334,20 @@ $file = <<<'FILE'
         }
       }
 
+      var soundtrackPlaying = false
       window.Draw = async () => {
         if(!gameLoaded) return
         var t = renderer.t
         gameSync()
         
+        if(!soundtrackPlaying) {
+          soundtrackPlaying = true
+          //startSound('music')
+        }
+        
         playerData.fM = false
         playerData.fC = false
         
-        console.log(renderer.flyMode, renderer.mspeed)
         renderer.mspeed = renderer.flyMode ? 1e3 : 300
         
         playerData.gS = playerData.mCt > 0 ? 0 : 1
@@ -1315,7 +1384,7 @@ $file = <<<'FILE'
             }
           })
         }
-        
+
         var fl = -floor(-renderer.x, -renderer.z) - 1e3
         if(renderer.flyMode){
           if(renderer.y >= fl){
@@ -1345,7 +1414,7 @@ $file = <<<'FILE'
           
           playervy += grav
           renderer.y += playervy
-          if(renderer.y > fl - 20){
+          if(renderer.y > fl - 400){
             renderer.y = fl
             playervy = 0
             renderer.hasTraction = true
@@ -1374,8 +1443,8 @@ $file = <<<'FILE'
             var ax = medkitShape.x = ((i%mcl)-mcl/2 + .5) * msp
             var az = medkitShape.z = ((i/mcl/mrw|0)-mbr/2 + .5) * msp
             
-            var migx = 1e5
-            var migz = 1e5
+            var migx = 2e5
+            var migz = 2e5
             while(ax + nax + renderer.x > migx) nax -= migx*2
             while(ax + nax + renderer.x < -migx) nax += migx*2
             while(az + naz + renderer.z > migz) naz -= migz*2
@@ -1406,8 +1475,8 @@ $file = <<<'FILE'
             var ax = flightPowerupShape.x = ((i%mfpucl)-mfpucl/2 + .5) * mfpusp
             var az = flightPowerupShape.z = ((i/mfpucl/mfpurw|0)-mfpubr/2 + .5) * mfpusp
             
-            var migx = 1e5
-            var migz = 1e5
+            var migx = 2e5
+            var migz = 2e5
             while(ax + nax + renderer.x > migx) nax -= migx*2
             while(ax + nax + renderer.x < -migx) nax += migx*2
             while(az + naz + renderer.z > migz) naz -= migz*2
@@ -1419,7 +1488,7 @@ $file = <<<'FILE'
             var d = Math.hypot(-playerData.x - flightPowerupShape.x, 
                            playerData.y - flightPowerupShape.y, 
                           -playerData.z - flightPowerupShape.z)
-            if(d < 1e5){
+            if(d < 2e5){
               if(d < 5e3){
                 renderer.flyMode = true
                 setTimeout(()=>{
@@ -1458,7 +1527,7 @@ $file = <<<'FILE'
                 if(d < 2e3){
                   startSound('powerup')
                   powerupAuras[o].nextRespawn = t + powerupRespawnSpeed
-                  playerData.mCt += o+1
+                  playerData.mCt = Math.min(maxMissiles, playerData.mCt + o + 1)
                 }else{
                   for(var i = sd == 1 ? 2: sd; i--;){
                     if(sd == 1 && i) continue
@@ -1620,8 +1689,8 @@ $file = <<<'FILE'
         var ax = weaponsTrackShape.x
         var az = weaponsTrackShape.z
         
-        var migx = 1e5
-        var migz = 1e5
+        var migx = 2e5
+        var migz = 2e5
         while(ax + nax + renderer.x > migx) nax -= migx*2
         while(ax + nax + renderer.x < -migx) nax += migx*2
         while(az + naz + renderer.z > migz) naz -= migz*2
@@ -1701,7 +1770,7 @@ $file = <<<'FILE'
             return ret
           })
           
-          playerData.painted = false
+          playerData.pntd = false
           missiles.map(async missile => {
 
             // heat-seeking
@@ -1722,7 +1791,7 @@ $file = <<<'FILE'
             if(midx != -1){
               if(players[midx].id == playerData.id){
                 startSound('radar warning')
-                playerData.painted = true
+                playerData.pntd = true
               }
               if(mind > missileSpeed * 1.5) {
                 var tx = -players[midx].x
@@ -1752,16 +1821,15 @@ $file = <<<'FILE'
                 missile.vz = -C(p1) * S(p2) * missileSpeed
               }else{
                 missile.t = -missileLife
-                spawnSplosion(missile.x, missile.y, missile.z,
-                              missile.vx, missile.vy, missile.vz)
                 if(+players[midx].id == +playerData.id){
                   playerData.hl -= missileDamage
                   if(playerData.hl <= 0){
+                    missile.t = -missileLife
+                    spawnSplosion(playerData.x, playerData.y, playerData.z)
                     playerData.hl = 0
                     playerData.dm = 1
                     playerData.al = false
                     renderer.useKeys = false
-                    spawnSplosion(playerData.x, playerData.y, playerData.z, 0, 0, 0)
                   }else{
                     playerData.dm += missileDamage * 4
                   }
@@ -1769,11 +1837,9 @@ $file = <<<'FILE'
                 }
               }
             }
-            
-            if(missile.y + missile.vy < floor(missile.x + missile.vx, missile.z + missile.vz)){
+            var fl = floor(missile.x + missile.vx * 2, missile.z + missile.vz * 2)
+            if(missile.y + missile.vy * 2 < fl){
               missile.t = -missileLife
-              spawnSplosion(missile.x, missile.y, missile.z,
-                            missile.vx, missile.vy, missile.vz)
             } else {
               missileShape.x = missile.x += missile.vx
               missileShape.y = missile.y += missile.vy
@@ -1794,7 +1860,7 @@ $file = <<<'FILE'
             }
           })
           
-          if(!playerData.painted){
+          if(!playerData.pntd){
             stopSound('radar warning')
           }
         }
@@ -1902,7 +1968,7 @@ $file = <<<'FILE'
 
       // db sync
       //const URLbase = 'http://52.207.184.99/flock'
-      const URLbase = 'https://bosstools.mooo.com/flock'
+      const URLbase = 'https://boss.veriler.com/flock'
       
       const syncPlayers = data => {
         var tPlayers = structuredClone(players)
@@ -1951,7 +2017,7 @@ $file = <<<'FILE'
               v.yaw             = player.yaw
               v.roll            = player.roll
               v.pitch           = player.pitch
-              v.painted         = player.painted
+              v.pntd            = player.pntd
               v.keep            = true
             }else{
               var newObj = {
@@ -1974,7 +2040,7 @@ $file = <<<'FILE'
               newObj.hl                = player.hl
               newObj.name              = player.name
               newObj.id                = +player.id
-              newObj.painted           = player.painted
+              newObj.pntd              = player.pntd
               newObj.x                 = newObj.ix     = player.x
               newObj.y                 = newObj.iy     = player.y
               newObj.z                 = newObj.iz     = player.z
@@ -1991,18 +2057,8 @@ $file = <<<'FILE'
       window.updatePlayerName = e => {
         if(!playerName.value) return
         playerName.value = playerName.value.substr(0, 20)
-        var params = location.href.split('?')
-        if(params.length > 1){
-          params = params[1].split('&').filter(v=>{
-            return v.toLowerCase().indexOf('name=') == -1
-          }).join('&')
-          params = '?name=' + playerName.value + (params ? '&' : '') + params
-        }else{
-          params = '?name=' + playerName.value
-        }
-        var newURL = location.href.split('?')[0] + params
+        updateURL('name', playerName.value)
         playerData.name = playerName.value
-        history.replaceState({}, document.title, newURL)
       }
       
       const launchLocalClient = data => {
@@ -2099,7 +2155,7 @@ $file = <<<'FILE'
           playerData.fC = false
           playerData.ip = false
           playerData.dm = 0
-          playerData.painted = false
+          playerData.pntd = false
         }
       }
 

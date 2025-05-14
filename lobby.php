@@ -18,12 +18,14 @@
       "./coordinates.js"
     
       var rendererOptions = {
-        ambientLight: .4,
-        fov: 1500
+        ambientLight: .25,
+        fov: 1500 / 2,
+        width: 960,
+        height: 540,
       }
       var renderer = await Coordinates.Renderer(rendererOptions)
       
-      renderer.z = 16
+      renderer.z = 27
       var splashImg = './splash.jpg'
       
       Coordinates.AnimationLoop(renderer, 'Draw')
@@ -66,10 +68,12 @@
           scaleX: 512/358,
           involveCache: false,
           size: 2,
-          subs: 0,
+          subs: 3,
           pitch: Math.PI,
           colorMix: 0,
-          map: `level ${i+1}.jpg`,
+          //yaw: .001,
+          roll: -.004,
+          map: `level ${i+1} monochrome.jpg`,
         }
         await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           await shader.ConnectGeometry(geometry)
@@ -78,8 +82,13 @@
       }
       
       window.onkeydown = e => {
-        if(e.keyCode == 37) recedeSel()
-        if(e.keyCode == 39) advanceSel()
+        if(!gameLaunched){
+          switch(e.keyCode){
+            case 37: recedeSel(); break
+            case 39: advanceSel(); break
+            case 13: launch(curSel); break
+          }
+        }
       }
       
       
@@ -91,7 +100,14 @@
         if(--curSel < 0) curSel+=5
       }
       
-      var p, d, X, Y, Z
+      var gameLaunched = false
+      const launch = level => {
+        console.log('launching level ' + (level + 1))
+        gameLaunched = true
+      }
+      
+      var ip=Array(levelTiles.length).fill(0), cp=0, p=0, d, X, Y, Z
+      var homing = 5, maxRot = .05
       window.Draw = () => {
         
         var t = renderer.t
@@ -109,13 +125,42 @@
         })
         
         levelTiles.map((tile, idx) => {
-          tile.pitch = -renderer.pitch + Math.PI
-          tile.x = S(p = Math.PI / levelTiles.length + 
+          cp = Math.PI / levelTiles.length + 
                          Math.PI*2/levelTiles.length * idx +
-                         Math.PI*2/5*curSel) * 15
-          tile.y = 3
+                         Math.PI*2/5*(2-curSel)
+          while(Math.abs(cp - ip[idx]) > Math.PI){
+            if(cp > ip[idx]){
+              cp -= Math.PI*2
+            }else{
+              if(cp < ip[idx]) cp += Math.PI*2
+            }
+          }
+          ip[idx] += Math.min(maxRot, Math.max(-maxRot, (cp - ip[idx]) / homing))
+          
+          tile.pitch = -renderer.pitch + Math.PI - .01
+          tile.x = S(p = ip[idx]) * 15
+          tile.y = 3.75
           tile.z = C(p) * 15
-          tile.showBounding = tile.z < -12.5
+          if(tile.z < -14.5){
+            var bounding = Coordinates.ShowBounding(tile, renderer, false)
+            var pip = Coordinates.PointInPoly2D(renderer.mouseX,
+                                          renderer.mouseY, bounding)
+            if(pip){
+              tile.boundingColor = 0x00ff88
+              Coordinates.ShowBounding(tile, renderer, true)
+            }
+            if(!gameLaunched && renderer.mouseButton == 1 && pip) launch(curSel)
+          }else if(tile.z < 10){
+            var bounding = Coordinates.ShowBounding(tile, renderer, false)
+            var pip = Coordinates.PointInPoly2D(renderer.mouseX,
+                                          renderer.mouseY, bounding)
+            if(pip){
+              tile.boundingColor = 0xff0000
+              Coordinates.ShowBounding(tile, renderer, true)
+            }
+            if(renderer.mouseButton == 1 && pip) curSel = idx
+            
+          }
           renderer.Draw(tile)
         })
         

@@ -5,6 +5,7 @@
     * levels / arenas w/ selection menu
     * load-time optimizations (pre-resize everything)
     * 'sessions' engine w/ max players
+    * join-link w/ copy button
 -->
 
 <!DOCTYPE html>
@@ -98,23 +99,25 @@
       var Rn = Math.random
     
       const floor = (X, Z) => {
-        
-        // level 1 (?)
-        //return  Math.min(1.125, Math.max(0,C(X/Math.PI/2500) + C(Z/Math.PI/2500))) * 1e4
-
-        // level 2 (?)
-         return  -Math.hypot(X, Z) 
-        
-        // level 3 (?)
-        //return Math.min(8, Math.max(-.25, (S(X/2e3+renderer.t/8) * S(Z/2e3) + S(X/2500) * S(Z/2500+renderer.t * 3 / 8)) ** 3)) * 2e3
-        
-        // level 4 (?)
-        //var d = Math.hypot(X, Z)
-        //return Math.min(500, Math.max(-1e6, (C(Math.PI / 1e5 * X) + C(Math.PI / 1e5 * Z))* 5e4))
-
-        // level 4 (?)
-        //var d = Math.hypot(X, Z)
-        //return Math.max(-500, Math.min(1e6, (C(Math.PI / 1e5 * X) + C(Math.PI / 1e5 * Z))* 5e4))
+        switch(level){
+          case 1:
+            return  Math.min(1.125, Math.max(0,C(X/Math.PI/2500) + C(Z/Math.PI/2500))) * 1e4
+          break
+          case 2:
+            return  -Math.hypot(X, Z) 
+          break
+          case 3:
+            return Math.min(8, Math.max(-.25, (S(X/2e3+renderer.t/8) * S(Z/2e3) + S(X/2500) * S(Z/2500+renderer.t * 3 / 8)) ** 3)) * 2e3
+          break
+          case 4:
+            var d = Math.hypot(X, Z)
+            return Math.min(500, Math.max(-1e6, (C(Math.PI / 1e5 * X) + C(Math.PI / 1e5 * Z))* 5e4))
+          break
+          case 5:
+            var d = Math.hypot(X, Z)
+            return Math.max(-500, Math.min(1e6, (C(Math.PI / 1e5 * X) + C(Math.PI / 1e5 * Z))* 5e4))
+          break
+        }
       }
 
       var X, Y, Z
@@ -170,11 +173,58 @@
       var flightPowerupRespawnSpeed = 20
       var flightTime = 50
       var maxPlayerVel = 200
+      var maxMissiles = 50
+      var level = 1
 
-      //var refTexture = './equisky3.jpg'
-      var refTexture = './pseudoEquirectangular_3.jpg'
-      var heightMap = 'https://srmcgann.github.io/Coordinates/resources/bumpmap_equirectangular_po2.jpg'
-      var floorMap = './floorCircuitry.jpg'
+      const updateURL = (param, value) => {
+        var params = location.href.split('?')
+        if(params.length > 1){
+          params = params[1].split('&').filter(v=>{
+            return v.toLowerCase().indexOf(param + '=') == -1
+          }).join('&')
+          params = '?'+param+'=' + value + (params ? '&' : '') + params
+        }else{
+          params = '?'+param+'=' + value
+        }
+        var newURL = location.href.split('?')[0] + params
+        history.replaceState({}, document.title, newURL)
+      }
+
+      var l = location.href.toLowerCase().split('level=')
+      if(l.length>1){
+        level = (+location.href.split('level=')[1].split('&')[0])
+      }
+      updateURL('level', level)
+
+      var refTexture
+      var floorMap
+      switch(level){
+        case 1:
+          refTexture = './equisky3.jpg'
+          floorMap = './floorCircuitry.jpg'
+        break
+        case 2:
+          refTexture = './pseudoEquirectangular_3.jpg'
+          floorMap = './floorCircuitry.jpg'
+        break
+        case 3:
+          refTexture = './equisky3.jpg'
+          floorMap = './floorCircuitry2.jpg'
+        break
+        case 4:
+          refTexture = './pseudoEquirectangular_3.jpg'
+          floorMap = './floorCircuitry3.jpg'
+        break
+        case 5:
+          refTexture = './equisky3.jpg'
+          floorMap = './floorCircuitry2.jpg'
+        break
+        //case 6:
+        //  refTexture = './pseudoEquirectangular_3.jpg'
+        //  floorMap = './floorCircuitry.jpg'
+        //break
+      }
+      
       
       var dmOverlay = new Image()
       dmOverlay.src = './damage.png'
@@ -259,7 +309,7 @@
         { name: 'splode',
           url: './splode.ogg?2',
           resource: new Audio('./splode.ogg?2'),
-          loop: false, volume: 2},
+          loop: false, volume: 10},
         { name: 'powerup',
           url: './upgrade.ogg',
           resource: new Audio('./upgrade.ogg'),
@@ -695,7 +745,7 @@
           scaleUVY: 6,
           map: refTexture,
         }
-        if(0) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
+        if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           shapes.push(geometry)
           await backgroundShader.ConnectGeometry(geometry)
         }) 
@@ -745,8 +795,6 @@
           fipNormals: true,
           //pitch: Math.PI,
           map: floorMap,
-          //heightMap,
-          //heightMapIntensity: 50,
           playbackSpeed: 1
         }
         if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
@@ -976,15 +1024,17 @@
         vy = (vy/3) //** 3 / 5
         vz = (vz/3) //** 3 / 5
         var data = structuredClone(baseSplosion).map(v=>{
-          v[3] += vx
-          v[4] += vy
-          v[5] += vz
+          var d = Math.hypot(vx, vy, vz)
+          var rv = Rn() * d
+          v[3] += vx / d * rv
+          v[4] += vy / d * rv
+          v[5] += vz / d * rv
           return v
         })
         splosions = [...splosions, {x, y, z, data, age: 1}]
         var vol = 1 / (1+(1+Math.hypot(renderer.x + x,
                                        renderer.y - y,
-                                       renderer.z + z))**2/500000000)
+                                       renderer.z + z))**2/300000000)
         startSound('splode', vol)
       }
       
@@ -1176,7 +1226,7 @@
         if(playerData.pntd && (((t*60|0)%10) < 5)){
           ctx.fillStyle = '#f04'
           ctx.fillRect(0,0,c.width, c.height)
-          ctx.clearRect(100,100,c.width-200, c.height-200)
+          ctx.clearRect(20,20,c.width-40, c.height-40)
         }
         
 
@@ -1475,7 +1525,7 @@
                 if(d < 2e3){
                   startSound('powerup')
                   powerupAuras[o].nextRespawn = t + powerupRespawnSpeed
-                  playerData.mCt += o+1
+                  playerData.mCt = Math.min(maxMissiles, playerData.mCt + o + 1)
                 }else{
                   for(var i = sd == 1 ? 2: sd; i--;){
                     if(sd == 1 && i) continue
@@ -1772,6 +1822,8 @@
                 if(+players[midx].id == +playerData.id){
                   playerData.hl -= missileDamage
                   if(playerData.hl <= 0){
+                    missile.t = -missileLife
+                    spawnSplosion(playerData.x, playerData.y, playerData.z)
                     playerData.hl = 0
                     playerData.dm = 1
                     playerData.al = false
@@ -2003,18 +2055,8 @@
       window.updatePlayerName = e => {
         if(!playerName.value) return
         playerName.value = playerName.value.substr(0, 20)
-        var params = location.href.split('?')
-        if(params.length > 1){
-          params = params[1].split('&').filter(v=>{
-            return v.toLowerCase().indexOf('name=') == -1
-          }).join('&')
-          params = '?name=' + playerName.value + (params ? '&' : '') + params
-        }else{
-          params = '?name=' + playerName.value
-        }
-        var newURL = location.href.split('?')[0] + params
+        updateURL('name', playerName.value)
         playerData.name = playerName.value
-        history.replaceState({}, document.title, newURL)
       }
       
       const launchLocalClient = data => {
