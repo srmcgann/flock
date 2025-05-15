@@ -1,3 +1,5 @@
+<?
+$file = <<<'FILE'
 <!DOCTYPE html>
 <html>
   <head>
@@ -74,7 +76,7 @@
           colorMix: 0,
           //yaw: .001,
           roll: -.004,
-          map: `level ${i+1}.png`,
+          map: `level ${i+1} monochrome.jpg`,
         }
         await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           await shader.ConnectGeometry(geometry)
@@ -175,3 +177,6 @@
     </script>
   </body>
 </html>
+
+FILE;
+file_put_contents('../../flock/lobby/index.php', $file);
