@@ -10,9 +10,20 @@
       $slug = decToAlpha($id);
       $timestamp = date("Y-m-d H:i:s");
       
+      $sql = "SELECT * FROM  sessions WHERE arena LIKE BINARY \"$arena\"";
+      $res = mysqli_query($link, $sql);
+      if(mysqli_num_rows($res)){
+        if(mysqli_num_rows($res) >= $maxPlayersPerArena){
+          echo json_encode("full");
+          return
+        }
+        $row = mysqli_fetch_assoc($res);
+        $level = intval($row['level']);
+      }      
+      
       $sanitizedData = mysqli_real_escape_string($link, json_encode($data));
-      $sql = "INSERT INTO sessions (id, slug, data, seen, arena)
-              VALUES($id, \"$slug\", \"$sanitizedData\", \"$timestamp\", \"$arena\")";
+      $sql = "INSERT INTO sessions (id, slug, data, seen, arena, level)
+              VALUES($id, \"$slug\", \"$sanitizedData\", \"$timestamp\", \"$arena\", $level)";
       mysqli_query($link, $sql);
       
       // maintenance //

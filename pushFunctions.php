@@ -3,15 +3,7 @@ $file = <<<'FILE'
 <?
   require_once('db.php');
   
-  
-  // some game constants
-  
-  $maxPlayersPerArena = 8;
-  
-  ///////////////////////
-  
-
-  function alphaToDec($val){
+   function alphaToDec($val){
     $pow=0;
     $res=0;
     while($val!=""){
@@ -154,7 +146,6 @@ $file = <<<'FILE'
     $sql = "UPDATE sessions SET data = ";
   }
 ?>
-
 
 FILE;
 file_put_contents('../../flock/functions.php', $file);

@@ -1,15 +1,7 @@
 <?
   require_once('db.php');
   
-  
-  // some game constants
-  
-  $maxPlayersPerArena = 8;
-  
-  ///////////////////////
-  
-
-  function alphaToDec($val){
+   function alphaToDec($val){
     $pow=0;
     $res=0;
     while($val!=""){

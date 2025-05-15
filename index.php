@@ -4,12 +4,13 @@
 ?>
 <!--
   to-do:
-    ✔ sound efx / music w/mute-button
+    ✔ sound efx / music
     ✔ item/track tile movement -> x2 scale
     ✔ levels / arenas w/ selection menu
     ✔ 'sessions' engine w/ max players
+    ✔ join-link w/ copy button
+    *  mute button
     * load-time optimizations (pre-resize everything)
-    * join-link w/ copy button
     * improve lobby graphics
 -->
 
@@ -22,6 +23,7 @@
         margin: 0;
         min-height: 100vh;
         overflow: hidden;
+        font-family: verdana;
       }
       .overlay{
         width: 100vw;
@@ -61,9 +63,61 @@
         opacity: .75;
         color: #fff;
       }
+      .toolCaption{
+        text-align: right;
+        position: fixed;
+        z-index: 100;
+        right: 45px;
+        top: 5;
+        display: inline-block;
+        font-size: 20px;
+        color: #fff;
+        text-shadow: 3px 3px 3px #0f4;
+      }
+      .copyButton{
+        cursor: pointer;
+        opacity: .85;
+        position: fixed;
+        z-index: 100;
+        top: 5px;
+        right: 5px;
+        width: 30px;
+        height: 33px;
+        background-image: url(copy.png);
+        background-position: center center;
+        background-size: contain;
+        background-repeat: no-repeat;
+        background-color: transparent;
+        border: none;
+        display: inline-block;
+      }
+      #copyConfirmation{
+        display: none;
+        position: absolute;
+        width: 100vw;
+        height: 100vh;
+        top: 0;
+        left: 0;
+        background: #012d;
+        color: #8ff;
+        opacity: 1;
+        text-shadow: 0 0 5px #fff;
+        font-size: 46px;
+        text-align: center;
+        z-index: 10000;
+      }
+      #innerCopied{
+        position: absolute;
+        top: 50%;
+        width: 100%;
+        z-index: 1020;
+        text-align: center;
+        transform: translate(0, -50%) scale(2.0, 1);
+      }
     </style>
   </head>
   <body>
+    <div id="copyConfirmation"><div id="innerCopied">COPIED!</div></div>
     <label for="playerName" class="inputLabel">
       name 
       <input
@@ -74,6 +128,12 @@
         onmousedown="selectMaybe(this)"
       />
     </label>
+    <button
+      class="copyButton"
+      onclick="copyLink()"
+      title="copy arena link"
+    ></button>
+    <span class="toolCaption">arena link</span>
     <div class="overlay">
       <video
         id="loadingVideo"
@@ -536,9 +596,6 @@
           url: './birdship.json',
           map: './birdship.png',
           name: 'bird ship',
-          scaleX: 50,
-          scaleY: 50,
-          scaleZ: 50,
           rotationMode: 1,
           colorMix: 0,
         }
@@ -590,12 +647,7 @@
           shapeType: 'custom shape',
           url: 'https://srmcgann.github.io/Coordinates/custom shapes/bird ship/wings.json',
           map: 'https://srmcgann.github.io/Coordinates/custom shapes/bird ship/feathers.jpg',
-          //scaleX: 600,
-          //scaleY: 600,
-          //scaleZ: 600,
           name: 'flight powerup',
-          //averageNormals: true,
-          //exportShape: true,
         }
         if(1){
           await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
@@ -618,16 +670,18 @@
 
         var geoOptions = {
           shapeType: 'custom shape',
+          name: 'weapons track',
           map: './track.jpg',
           url: './weaponsTrack.json',
           //url: 'https://srmcgann.github.io/objs/track.obj',
-          //averageNormals: true,
-          scaleX: 6.33,
-          scaleZ: 6.33,
+          //scaleX: 6.33,
+          //scaleZ: 6.33,
           x: 0,
           y: 0,
           z: 0,
           size: 1,
+          //averageNormals: true,
+          //exportShape: true,
         }
         if(1){
           await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
@@ -656,8 +710,7 @@
           shapeType: 'sprite',
           map: './powerupAura.png?3',
           name: 'generic powerup aura',
-          //scaleY: .66,
-          size: 150
+          //size: 150
         }
         if(1){
           await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
@@ -672,7 +725,8 @@
             map: './powerup_' + (m + 1) + '.png',
             name: 'powerup aura ' + (m + 1),
             scaleY: .66,
-            size: 64
+            //averageNormals: !m,
+            //exportShape: !m,
           }
           if(1){
             await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
@@ -689,9 +743,10 @@
           url: './missilePowerup.json',
           map: './birdship.png',
           name: 'missilePowerup',
-          scaleX: 6,
-          scaleY: 4,
-          scaleZ: 6,
+          //scaleX: 6,
+          //scaleY: 4,
+          //scaleZ: 6,
+          //averageNormals: true,
           //exportShape: true,
         }
         if(1){
@@ -706,12 +761,14 @@
           url: './guns.json',
           map: './birdship.png',
           name: 'gun shape',
-          scaleX: 50,
-          scaleY: 50,
-          scaleZ: 50,
+          //scaleX: 50,
+          //scaleY: 50,
+          //scaleZ: 50,
           size: 1,
           rotationMode: 1,
           colorMix: 0,
+          //averageNormals: true,
+          //exportShape: true,
         }
         if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           gunShape = geometry
@@ -723,12 +780,14 @@
           url: './chainguns.json',
           map: './birdship.png',
           name: 'chainguns',
-          scaleX: 50,
-          scaleY: 50,
-          scaleZ: 50,
+          //scaleX: 50,
+          //scaleY: 50,
+          //scaleZ: 50,
           size: 1,
           rotationMode: 1,
           colorMix: 0,
+          //averageNormals: true,
+          //exportShape: true,
         }
         if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           chaingunShape = geometry
@@ -742,8 +801,6 @@
           name: 'missile',
           rotationMode: 1,
           colorMix: 0,
-          //averageNormals: true,
-          //exportShape: true
         }
         if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           missileShape = geometry
@@ -757,10 +814,12 @@
           name: 'bullet',
           rotationMode: 1,
           colorMix: 0,
-          scaleX: 50,
-          scaleY: 50,
-          scaleZ: 50,
+          //scaleX: 50,
+          //scaleY: 50,
+          //scaleZ: 50,
           size: 1,
+          //averageNormals: true,
+          //exportShape: true,
         }
         if(0) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           bulletShape = geometry
@@ -778,6 +837,8 @@
           scaleUVX: 6,
           scaleUVY: 6,
           map: refTexture,
+          averageNormals: true,
+          exportShape: true,
         }
         if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           shapes.push(geometry)
@@ -815,21 +876,24 @@
         })
         
         var geoOptions = {
-          shapeType: 'dynamic',
+          shapeType: 'custom shape',
+          url: './floor.json',
           name: 'floor',
           equirectangular: false,
           size: 5,
           //averageNormals: true, 
-          geometryData,
+          //geometryData,
           scaleUVX: 2,
           scaleUVY: 2,
-          texCoords,
+          //texCoords,
           color: 0xffffff,
           colorMix: 0,
-          fipNormals: true,
+          //fipNormals: true,
           //pitch: Math.PI,
           map: floorMap,
-          playbackSpeed: 1
+          playbackSpeed: 1,
+          //averageNormals: true,
+          //exportShape: true,
         }
         if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           shapes.push(geometry)
@@ -857,9 +921,10 @@
           color: 0x4400ff,
           alpha: .5,
           penumbra: .2,
-          scaleX: 20,
-          scaleZ: 20,
-          //exportShape: true
+          //scaleX: 20,
+          //scaleZ: 20,
+          //averageNormals: true,
+          //exportShape: true,
         }
         if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           floorParticles = geometry
@@ -2089,6 +2154,38 @@
         }
       }
       
+      window.copyLink = () => {
+        let copyEl = document.createElement('div')
+        copyEl.innerHTML = location.origin + location.pathname + `?arena=${arena}`
+        copyEl.style.opacity = .01
+        copyEl.style.position = 'absolute'
+        document.body.appendChild(copyEl)
+        var range = document.createRange()
+        range.selectNode(copyEl)
+        window.getSelection().removeAllRanges()
+        window.getSelection().addRange(range)
+        document.execCommand("copy")
+        window.getSelection().removeAllRanges()
+        copyEl.remove()
+        let el = document.querySelector('#copyConfirmation')
+        el.style.display = 'block';
+        el.style.opacity = 1
+        let reduceOpacity = () => {
+          if(+el.style.opacity > 0){
+            el.style.opacity -= .02 * 2
+            if(+el.style.opacity<.1){
+              el.style.opacity = 1
+              el.style.display = 'none'
+            }else{
+              setTimeout(()=>{
+                reduceOpacity()
+              }, 10)
+            }
+          }
+        }
+        setTimeout(()=>{reduceOpacity()}, 250)
+      }
+
       window.updatePlayerName = e => {
         if(!playerName.value) return
         playerName.value = playerName.value.substr(0, 20)
@@ -2213,11 +2310,11 @@
           playerData.lv = level
         }
       }
-
+      
       var playerData
       respawn()
 
-      if(location.href.indexOf('name=')!=-1 || location.href.indexOf('level=')!=-1){
+      if(location.href.indexOf('arena=')!=-1 || location.href.indexOf('level=')!=-1){
         coms('launch.php', 'launchLocalClient')
       } else {
         location.href = './lobby'
