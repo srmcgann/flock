@@ -6,7 +6,7 @@ $file = <<<'FILE'
   
   // some game constants
   
-  $maxPlayersPerArena = 30;
+  $maxPlayersPerArena = 8;
   
   ///////////////////////
   
@@ -108,13 +108,13 @@ $file = <<<'FILE'
       $sql = "SELECT * FROM  sessions WHERE arena LIKE BINARY \"$arena\"";
       $res = mysqli_query($link, $sql);
       if(mysqli_num_rows($res)){
-        if(mysqli_num_rows($res) > $maxPlayersPerArena){
-          $arena = createArena();
+        if(mysqli_num_rows($res) >= $maxPlayersPerArena){
+          return json_encode("full");
         }
         $row = mysqli_fetch_assoc($res);
         $level = intval($row['level']);
       } else {
-        $level = 1;
+        return json_encode("no arena");
       }
     } else {
       $arena = createArena();

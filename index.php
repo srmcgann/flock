@@ -7,9 +7,10 @@
     ✔ sound efx / music w/mute-button
     ✔ item/track tile movement -> x2 scale
     ✔ levels / arenas w/ selection menu
-    * 'sessions' engine w/ max players
+    ✔ 'sessions' engine w/ max players
     * load-time optimizations (pre-resize everything)
     * join-link w/ copy button
+    * improve lobby graphics
 -->
 
 <!DOCTYPE html>
@@ -168,7 +169,7 @@
       var smokeParticles
       var showMenu                 = false
       var mST                      = 0
-      var mSTInterval              = .3
+      var mSTInterval              = .2
       var missileSpeed             = 1e3
       var missileLife              = 6
       var cST                      = 0
@@ -978,7 +979,7 @@
               showMenu = !showMenu
             }
             if(e.keyCode == 70 && playerData.al){
-              renderer.flyMode = !renderer.flyMode
+              //renderer.flyMode = !renderer.flyMode
             }
           }
         }
@@ -1066,7 +1067,7 @@
         })
         splosions = [...splosions, {x, y, z, data, age: 1}]
         var vol = 1 / (1+(1+Math.hypot(renderer.x + x,
-                                       renderer.y - y,
+                                       renderer.y + y,
                                        renderer.z + z))**2/300000000)
         startSound('splode', vol)
       }
@@ -1592,6 +1593,13 @@
               iplayers.map(async player => {
                 if(+player.id != +playerData.id){
                     
+                  shape.x = player.ix
+                  shape.y = player.iy
+                  shape.z = -player.iz
+                  shape.roll = player.iroll
+                  shape.pitch = player.ipitch
+                  shape.yaw = player.iyaw
+                  
                   drawPlayerNames({
                     x: shape.x,
                     y: shape.y,
@@ -1604,13 +1612,6 @@
                     al: player.al,
                   })
 
-                  shape.x = player.ix
-                  shape.y = player.iy
-                  shape.z = -player.iz
-                  shape.roll = player.iroll
-                  shape.pitch = player.ipitch
-                  shape.yaw = player.iyaw
-                  
                   if(player.fM) fireMissile({
                     id: player.id,
                     ip: true,
@@ -2096,6 +2097,17 @@
       }
       
       const launchLocalClient = data => {
+        
+        if(data == 'full') {
+          alert("This arena is full.\nYou may create another one....")
+          location.href = './lobby'
+        }
+        
+        if(data == 'no arena') {
+          alert("This arena has ended.\nyou may create a new one....")
+          location.href = './lobby'
+        }
+        
         playerData = data
         arena = playerData.ar
         
