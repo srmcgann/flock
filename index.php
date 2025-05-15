@@ -1,10 +1,14 @@
+<?
+  require_once('functions.php');
+  $level = getLevel();
+?>
 <!--
   to-do:
     ✔ sound efx / music w/mute-button
     ✔ item/track tile movement -> x2 scale
-    * levels / arenas w/ selection menu
-    * load-time optimizations (pre-resize everything)
+    ✔ levels / arenas w/ selection menu
     * 'sessions' engine w/ max players
+    * load-time optimizations (pre-resize everything)
     * join-link w/ copy button
 -->
 
@@ -79,6 +83,8 @@
     </div>
     <script type="module">
     
+      var testLevel = "<?=$level?>"
+    
       // net-game boilerplate
       var X, Y, Z, roll, pitch, yaw
       var reconnectionAttempts = 0
@@ -116,6 +122,9 @@
           case 5:
             var d = Math.hypot(X, Z)
             return Math.max(-500, Math.min(1e6, (C(Math.PI / 1e5 * X) + C(Math.PI / 1e5 * Z))* 5e4))
+          break
+          default:
+            return 0
           break
         }
       }
@@ -174,7 +183,7 @@
       var flightTime = 50
       var maxPlayerVel = 200
       var maxMissiles = 50
-      var level = 1
+      var level
       var arena
 
       const updateURL = (param, value) => {
@@ -204,12 +213,20 @@
       var l = location.href.toLowerCase().split('level=')
       if(l.length>1){
         level = +location.href.split('level=')[1].split('&')[0]
+      }else{
+        if(testLevel){
+          level = +testLevel
+          console.log(`setting level to ${testLevel} from database`)
+        }else{
+          location.href = './lobby'
+        }
       }
-      //updateURL('level', level)
 
       var l = location.href.toLowerCase().split('arena=')
       if(l.length>1){
-        arena = (+location.href.split('arena=')[1].split('&')[0])
+        arena = location.href.split('arena=')[1].split('&')[0]
+      }else{
+        arena = ''
       }
       
       var refTexture
@@ -2080,10 +2097,10 @@
       
       const launchLocalClient = data => {
         playerData = data
+        arena = playerData.ar
+        
         playerData.id = +playerData.id
         arena = playerData.ar
-        console.log(playerData)
-        level = +playerData.lv
         
         var pn = location.href.split('name=')
         if(pn.length>1){
@@ -2091,10 +2108,10 @@
           playerData.name = playerName.value = decodeURIComponent(pn)
         } else {
           pruneURL('level')
-          updateURL('arena', playerData.ar)
           playerName.value = playerData.name
           updatePlayerName()
         }
+        updateURL('arena', playerData.ar)
         
         setInterval(() => {
           coms('sync.php', 'syncPlayers')
@@ -2188,7 +2205,11 @@
       var playerData
       respawn()
 
-      coms('launch.php', 'launchLocalClient')
+      if(location.href.indexOf('name=')!=-1 || location.href.indexOf('level=')!=-1){
+        coms('launch.php', 'launchLocalClient')
+      } else {
+        location.href = './lobby'
+      }
     </script>
   </body>
 </html>

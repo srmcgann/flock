@@ -3,7 +3,7 @@ $file = <<<'FILE'
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Coordinates boilerplate example</title>
+    <title>flock lobby</title>
     <style>
       body, html{
         background: #333;
@@ -17,7 +17,7 @@ $file = <<<'FILE'
     <script type="module">
     
       import * as Coordinates from
-      "./coordinates.js"
+      "../coordinates.js"
     
       var rendererOptions = {
         ambientLight: .25,
@@ -104,7 +104,9 @@ $file = <<<'FILE'
       
       var gameLaunched = false
       const launch = level => {
-        console.log('launching level ' + (level + 1))
+        var l
+        location.href = location.origin+(l=location.pathname.split('/'))
+                          .filter((v,i)=>i<l.length-2).join('/') + `/?level=${level+1}`
         gameLaunched = true
       }
       
@@ -175,5 +177,6 @@ $file = <<<'FILE'
   </body>
 </html>
 
+
 FILE;
-file_put_contents('../../flock/lobby.php', $file);
+file_put_contents('../../flock/lobby/index.php', $file);

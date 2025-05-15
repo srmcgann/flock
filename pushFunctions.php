@@ -1,4 +1,6 @@
 <?
+$file = <<<'FILE'
+<?
   require_once('db.php');
   
   
@@ -151,4 +153,9 @@
     global $link;
     $sql = "UPDATE sessions SET data = ";
   }
+?>
+
+
+FILE;
+file_put_contents('../../flock/functions.php', $file);
 ?>

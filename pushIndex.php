@@ -1,12 +1,16 @@
 <?
 $file = <<<'FILE'
+<?
+  require_once('functions.php');
+  $level = getLevel();
+?>
 <!--
   to-do:
     ✔ sound efx / music w/mute-button
     ✔ item/track tile movement -> x2 scale
-    * levels / arenas w/ selection menu
-    * load-time optimizations (pre-resize everything)
+    ✔ levels / arenas w/ selection menu
     * 'sessions' engine w/ max players
+    * load-time optimizations (pre-resize everything)
     * join-link w/ copy button
 -->
 
@@ -81,6 +85,8 @@ $file = <<<'FILE'
     </div>
     <script type="module">
     
+      var testLevel = "<?=$level?>"
+    
       // net-game boilerplate
       var X, Y, Z, roll, pitch, yaw
       var reconnectionAttempts = 0
@@ -118,6 +124,9 @@ $file = <<<'FILE'
           case 5:
             var d = Math.hypot(X, Z)
             return Math.max(-500, Math.min(1e6, (C(Math.PI / 1e5 * X) + C(Math.PI / 1e5 * Z))* 5e4))
+          break
+          default:
+            return 0
           break
         }
       }
@@ -176,7 +185,8 @@ $file = <<<'FILE'
       var flightTime = 50
       var maxPlayerVel = 200
       var maxMissiles = 50
-      var level = 1
+      var level
+      var arena
 
       const updateURL = (param, value) => {
         var params = location.href.split('?')
@@ -192,12 +202,35 @@ $file = <<<'FILE'
         history.replaceState({}, document.title, newURL)
       }
 
+      const pruneURL = param => {
+        var ret = location.href
+        var params = ret.split('?')
+        if(params.length > 1){
+          var parts = params[1].split('&').filter(v=>v.indexOf(param)==-1).join('&')
+          ret = location.origin + location.pathname + (parts ? '?' : '') + parts
+          history.replaceState({}, document.title, ret)
+        }
+      }
+
       var l = location.href.toLowerCase().split('level=')
       if(l.length>1){
-        level = (+location.href.split('level=')[1].split('&')[0])
+        level = +location.href.split('level=')[1].split('&')[0]
+      }else{
+        if(testLevel){
+          level = +testLevel
+          console.log(`setting level to ${testLevel} from database`)
+        }else{
+          location.href = './lobby'
+        }
       }
-      updateURL('level', level)
 
+      var l = location.href.toLowerCase().split('arena=')
+      if(l.length>1){
+        arena = location.href.split('arena=')[1].split('&')[0]
+      }else{
+        arena = ''
+      }
+      
       var refTexture
       var floorMap
       switch(level){
@@ -305,8 +338,8 @@ $file = <<<'FILE'
           resource: new Audio('./metal5.ogg'),
           loop: false, volume: .35},
         { name: 'pew',
-          url: './pew.ogg',
-          resource: new Audio('./pew.ogg'),
+          url: './pew.ogg?2',
+          resource: new Audio('./pew.ogg?2'),
           loop: false, volume: .25},
         { name: 'splode',
           url: './splode.ogg?2',
@@ -321,8 +354,8 @@ $file = <<<'FILE'
           resource: new Audio('./megaUpgrade.ogg'),
           loop: false, volume: .5},
         { name: 'music',
-          url: './colossus.mp3',
-          resource: new Audio('./colossus.mp3'),
+          url: './ambientLoop.mp3',
+          resource: new Audio('./ambientLoop.mp3'),
           loop: true, volume: .2},
         { name: 'missile',
           url: './missile.ogg',
@@ -1342,7 +1375,7 @@ $file = <<<'FILE'
         
         if(!soundtrackPlaying) {
           soundtrackPlaying = true
-          //startSound('music')
+          startSound('music')
         }
         
         playerData.fM = false
@@ -1967,8 +2000,7 @@ $file = <<<'FILE'
       launch(renderer.width, renderer.height)
 
       // db sync
-      //const URLbase = 'http://52.207.184.99/flock'
-      const URLbase = 'https://boss.veriler.com/flock'
+      const URLbase = location.origin + location.pathname
       
       const syncPlayers = data => {
         var tPlayers = structuredClone(players)
@@ -2001,6 +2033,8 @@ $file = <<<'FILE'
               //l[0].name  = player.name
               //l[0].id    = player.id
               var v = l[0]
+              v.ar              = player.ar
+              v.lv              = player.lv
               v.al              = player.al
               v.dm              = player.dm
               v.hM              = player.hM
@@ -2032,6 +2066,8 @@ $file = <<<'FILE'
               newObj.cA                = false
               newObj.dm                = player.dm
               newObj.al                = player.al
+              newObj.ar                = player.ar
+              newObj.lv                = player.lv
               newObj.hM                = player.hM
               newObj.hC                = player.hC
               newObj.mST               = player.mST
@@ -2063,16 +2099,21 @@ $file = <<<'FILE'
       
       const launchLocalClient = data => {
         playerData = data
+        arena = playerData.ar
+        
         playerData.id = +playerData.id
+        arena = playerData.ar
         
         var pn = location.href.split('name=')
         if(pn.length>1){
           pn = pn[1].split('&')[0]
           playerData.name = playerName.value = decodeURIComponent(pn)
         } else {
+          pruneURL('level')
           playerName.value = playerData.name
           updatePlayerName()
         }
+        updateURL('arena', playerData.ar)
         
         setInterval(() => {
           coms('sync.php', 'syncPlayers')
@@ -2135,6 +2176,8 @@ $file = <<<'FILE'
             gS: 0, mCt: 0,
             roll: 0, pitch: 0, yaw: 0,
             mST: 0, cST: 0,
+            ar: arena,
+            lv: level,
             hM: true,
             hC: true,
             fM: false,
@@ -2156,13 +2199,19 @@ $file = <<<'FILE'
           playerData.ip = false
           playerData.dm = 0
           playerData.pntd = false
+          playerData.ar = arena
+          playerData.lv = level
         }
       }
 
       var playerData
       respawn()
 
-      coms('launch.php', 'launchLocalClient')
+      if(location.href.indexOf('name=')!=-1 || location.href.indexOf('level=')!=-1){
+        coms('launch.php', 'launchLocalClient')
+      } else {
+        location.href = './lobby'
+      }
     </script>
   </body>
 </html>

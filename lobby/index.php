@@ -15,7 +15,7 @@
     <script type="module">
     
       import * as Coordinates from
-      "./coordinates.js"
+      "../coordinates.js"
     
       var rendererOptions = {
         ambientLight: .25,
