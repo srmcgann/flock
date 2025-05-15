@@ -1,3 +1,5 @@
+<?
+$file = <<<'FILE'
 <!DOCTYPE html>
 <html>
   <head>
@@ -175,3 +177,6 @@
     </script>
   </body>
 </html>
+
+FILE;
+file_put_contents('../../flock/lobby/index.php', $file);
