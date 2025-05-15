@@ -11,8 +11,8 @@ $file = <<<'FILE'
     ✔ levels / arenas w/ selection menu
     ✔ 'sessions' engine w/ max players
     ✔ join-link w/ copy button
+    ✔ load-time optimizations (pre-resize everything)
     *  mute button
-    * load-time optimizations (pre-resize everything)
     * improve lobby graphics
 -->
 
@@ -74,7 +74,7 @@ $file = <<<'FILE'
         display: inline-block;
         font-size: 20px;
         color: #fff;
-        text-shadow: 3px 3px 3px #0f4;
+        text-shadow: 2px 2px 3px #40f;
       }
       .copyButton{
         cursor: pointer;
@@ -217,7 +217,7 @@ $file = <<<'FILE'
       var texCoords = []
       var minX = 6e6, maxX = -6e6
       var minZ = 6e6, maxZ = -6e6
-      var mag = 12.5 //20 * (2**.5/2)
+      var mag = 12.5
       var ax, ay, az, nax, nay, naz
       var missileHoming = .15
       var missileDamage = .25
@@ -230,12 +230,12 @@ $file = <<<'FILE'
       var bulletParticles, floorParticles, genericPowerupAura
       var smokeParticles
       var showMenu                 = false
-      var mST                      = 0
-      var mSTInterval              = .2
+      var mS                      = 0
+      var mSInterval              = .2
       var missileSpeed             = 1e3
       var missileLife              = 6
-      var cST                      = 0
-      var cSTInterval              = .05
+      var cS                      = 0
+      var cSInterval              = .05
       var chaingunSpeed            = 2e3
       var chaingunLife             = 6
       var smokeLife                = 5
@@ -279,7 +279,6 @@ $file = <<<'FILE'
       }else{
         if(testLevel){
           level = +testLevel
-          console.log(`setting level to ${testLevel} from database`)
         }else{
           location.href = './lobby'
         }
@@ -315,10 +314,6 @@ $file = <<<'FILE'
           refTexture = './equisky3.jpg'
           floorMap = './floorCircuitry2.jpg'
         break
-        //case 6:
-        //  refTexture = './pseudoEquirectangular_3.jpg'
-        //  floorMap = './floorCircuitry.jpg'
-        //break
       }
       
       
@@ -427,12 +422,11 @@ $file = <<<'FILE'
       sounds.map(sound => {
         sound.resource.oncanplay = e => {
           if(sound.loop) sound.resource.loop = true
-          sound.resource.volume = sound.volume
+          sound.resource.volume = Math.min(1, Math.max(0, sound.volume))
         }
       })
       
       const startSound = (soundName, volume=1) => {
-        console.log('starting sound: ' + soundName)
         if(!navigator.userActivation.hasBeenActive) return
         var sound = sounds.filter(v=>v.name == soundName)
         if(sound.length){
@@ -463,7 +457,6 @@ $file = <<<'FILE'
         height = width / ar
         await Coordinates.ResizeRenderer(renderer, width, height)
         renderer.fov = Math.hypot(width, height) / 2
-        //renderer.optionalPlugins[0].enabled = plugin
 
         var shaderOptions = [
           {lighting: { type: 'ambientLight', value: .2}},
@@ -595,7 +588,7 @@ $file = <<<'FILE'
 
         var geoOptions = {
           shapeType: 'custom shape',
-          url: './birdship.json',
+          url: './birdship.json?2',
           map: './birdship.png',
           name: 'bird ship',
           rotationMode: 1,
@@ -672,17 +665,13 @@ $file = <<<'FILE'
 
         var geoOptions = {
           shapeType: 'custom shape',
+          name: 'weapons track',
           map: './track.jpg',
-          url: './weaponsTrack.json',
-          //url: 'https://srmcgann.github.io/objs/track.obj',
-          scaleX: 6.33,
-          scaleZ: 6.33,
+          url: './weaponsTrack.json?2',
           x: 0,
           y: 0,
           z: 0,
           size: 1,
-          averageNormals: true,
-          exportShape: true,
         }
         if(1){
           await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
@@ -711,7 +700,7 @@ $file = <<<'FILE'
           shapeType: 'sprite',
           map: './powerupAura.png?3',
           name: 'generic powerup aura',
-          //size: 150
+          size: 150
         }
         if(1){
           await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
@@ -726,8 +715,9 @@ $file = <<<'FILE'
             map: './powerup_' + (m + 1) + '.png',
             name: 'powerup aura ' + (m + 1),
             scaleY: .66,
-            averageNormals: !m,
-            exportShape: !m,
+            size: 64,
+            //averageNormals: !m,
+            //exportShape: !m,
           }
           if(1){
             await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
@@ -741,14 +731,9 @@ $file = <<<'FILE'
         
         var geoOptions = {
           shapeType: 'custom shape',
-          url: './missilePowerup.json',
+          url: './missilePowerup.json?2',
           map: './birdship.png',
           name: 'missilePowerup',
-          scaleX: 6,
-          scaleY: 4,
-          scaleZ: 6,
-          averageNormals: true,
-          exportShape: true,
         }
         if(1){
           await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
@@ -759,17 +744,12 @@ $file = <<<'FILE'
         
         var geoOptions = {
           shapeType: 'custom shape',
-          url: './guns.json',
+          url: './guns.json?2',
           map: './birdship.png',
           name: 'gun shape',
-          scaleX: 50,
-          scaleY: 50,
-          scaleZ: 50,
           size: 1,
           rotationMode: 1,
           colorMix: 0,
-          averageNormals: true,
-          exportShape: true,
         }
         if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           gunShape = geometry
@@ -778,17 +758,14 @@ $file = <<<'FILE'
 
         var geoOptions = {
           shapeType: 'custom shape',
-          url: './chainguns.json',
+          url: './chainguns.json?2',
           map: './birdship.png',
           name: 'chainguns',
-          scaleX: 50,
-          scaleY: 50,
-          scaleZ: 50,
           size: 1,
           rotationMode: 1,
           colorMix: 0,
-          averageNormals: true,
-          exportShape: true,
+          //averageNormals: true,
+          //exportShape: true,
         }
         if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           chaingunShape = geometry
@@ -797,7 +774,7 @@ $file = <<<'FILE'
 
         var geoOptions = {
           shapeType: 'custom shape',
-          url: './missile.json',
+          url: './missile.json?2',
           map: './birdship.png',
           name: 'missile',
           rotationMode: 1,
@@ -810,17 +787,12 @@ $file = <<<'FILE'
 
         var geoOptions = {
           shapeType: 'custom shape',
-          url: './bullet.json',
+          url: './bullet.json?2',
           map: './birdship.png',
           name: 'bullet',
           rotationMode: 1,
           colorMix: 0,
-          scaleX: 50,
-          scaleY: 50,
-          scaleZ: 50,
           size: 1,
-          averageNormals: true,
-          exportShape: true,
         }
         if(0) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           bulletShape = geometry
@@ -838,8 +810,8 @@ $file = <<<'FILE'
           scaleUVX: 6,
           scaleUVY: 6,
           map: refTexture,
-          averageNormals: true,
-          exportShape: true,
+          //averageNormals: true,
+          //exportShape: true,
         }
         if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           shapes.push(geometry)
@@ -864,67 +836,32 @@ $file = <<<'FILE'
           return a
         })
         
-        var rangeX = maxX - minX
-        var rangeZ = maxZ - minZ
-        geometryData.map(face => {
-          var a = []
-          face.map(q=>{
-            var uvx = (q[0] - minX) / rangeX
-            var uvz = (q[2] - minZ) / rangeZ
-            a = [...a, [uvx, uvz]]
-          })
-          texCoords = [...texCoords, a]
-        })
-        
         var geoOptions = {
-          shapeType: 'dynamic',
+          shapeType: 'custom shape',
+          url: './floor.json?2',
           name: 'floor',
           equirectangular: false,
           size: 5,
-          //averageNormals: true, 
-          geometryData,
-          scaleUVX: 2,
-          scaleUVY: 2,
-          texCoords,
           color: 0xffffff,
           colorMix: 0,
-          fipNormals: true,
-          //pitch: Math.PI,
           map: floorMap,
           playbackSpeed: 1,
-          averageNormals: true,
-          exportShape: true,
         }
         if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           shapes.push(geometry)
           await floorShader.ConnectGeometry(geometry)
-          //Coordinates.SyncNormals(geometry, true, true)
         })
-
-        /*geometryData = Array(fcl*frw*fbr).fill().map((v, i) => {
-          tx = ((i%fcl) - fcl/2 + .5) * sp * ls * 2
-          tz = ((i/fcl/frw|0) - fbr/2 + .5) * sp * ls * 2
-          ty = floor(tx, tz)
-          return [tx, ty, tz]
-        })
-        */
         
         var geoOptions = {
           shapeType: 'custom shape',
-          //shapeType: 'particles',
-          url: './floorGrid.json?2',
+          url: './floorGrid.json?3',
           name: 'floor particles',
           involveCache: false,
           isParticle: true,
           size: 600,
-          //geometryData,
-          color: 0x4400ff,
+          color: Coordinates.HSVToHex(360/5*level,1,1),
           alpha: .5,
           penumbra: .2,
-          scaleX: 20,
-          scaleZ: 20,
-          averageNormals: true,
-          exportShape: true,
         }
         if(1) await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           floorParticles = geometry
@@ -1119,12 +1056,12 @@ $file = <<<'FILE'
         var fl = floor(x, z)
         if(Math.abs(y - fl < 20)) y = fl + 55
         spawnFlash(x, y, z, 3)
-        vx = (vx/3) //** 3 / 5
-        vy = (vy/3) //** 3 / 5
-        vz = (vz/3) //** 3 / 5
+        vx = vx/3
+        vy = vy/3
+        vz = vz/3
         var data = structuredClone(baseSplosion).map(v=>{
           var d = Math.hypot(vx, vy, vz)
-          var rv = Rn() * d
+          var rv = Rn() * d / 3
           v[3] += vx / d * rv
           v[4] += vy / d * rv
           v[5] += vz / d * rv
@@ -1159,11 +1096,11 @@ $file = <<<'FILE'
           }
         }
         if(!actualPlayer.al || 
-           renderer.t - actualPlayer.mST < mSTInterval) return
+           renderer.t - actualPlayer.mS < mSInterval) return
         var cont = true
         if(+player.id == +playerData.id){
-          if(playerData.mCt > 0){
-            playerData.mCt--
+          if(playerData.mC > 0){
+            playerData.mC--
           }else{
             cont = false
           }
@@ -1190,7 +1127,7 @@ $file = <<<'FILE'
           yaw    = player.yaw
         }
         
-        actualPlayer.mST = renderer.t
+        actualPlayer.mS = renderer.t
         var p1 = yaw + Math.PI
         var p2 = -pitch + Math.PI / 2
         var vx = -S(p1) * S(p2) * missileSpeed
@@ -1247,8 +1184,8 @@ $file = <<<'FILE'
           }
         }
         if(!player.al || 
-           renderer.t - actualPlayer.cST < cSTInterval) return
-        actualPlayer.cST = renderer.t
+           renderer.t - actualPlayer.cS < cSInterval) return
+        actualPlayer.cS = renderer.t
         var p1 = yaw + Math.PI
         var p2 = -pitch + Math.PI / 2
         var vx = -S(p1) * S(p2) * chaingunSpeed
@@ -1322,7 +1259,7 @@ $file = <<<'FILE'
         
         
         // radar warning
-        if(playerData.pntd && (((t*60|0)%10) < 5)){
+        if(playerData.pd && (((t*60|0)%10) < 5)){
           ctx.fillStyle = '#f04'
           ctx.fillRect(0,0,c.width, c.height)
           ctx.clearRect(20,20,c.width-40, c.height-40)
@@ -1370,7 +1307,7 @@ $file = <<<'FILE'
           ctx.font = (fs) + 'px verdana'
           ctx.fillStyle = '#fff'
           ctx.textAlign = 'center'
-          ctx.fillText(playerData.gS ? '∞' : playerData.mCt, c.width * .75, c.height - (playerData.gS ? c.height / 6: 0))
+          ctx.fillText(playerData.gS ? '∞' : playerData.mC, c.width * .75, c.height - (playerData.gS ? c.height / 6: 0))
           ctx.textAlign = 'left'
 
 
@@ -1409,7 +1346,7 @@ $file = <<<'FILE'
           ctx.textAlign = 'center'
           ctx.font = (fs) + 'px verdana'
           ctx.fillStyle = '#fff'
-          ctx.fillText(playerData.gS ? '∞' : playerData.mCt, c.width/1.05 + 24,
+          ctx.fillText(playerData.gS ? '∞' : playerData.mC, c.width/1.05 + 24,
                        c.height - fs * 2.5 - (playerData.gS ? c.height / 10 : c.height / 16))
           ctx.textAlign = 'left'
 
@@ -1447,7 +1384,7 @@ $file = <<<'FILE'
         
         renderer.mspeed = renderer.flyMode ? 1e3 : 300
         
-        playerData.gS = playerData.mCt > 0 ? 0 : 1
+        playerData.gS = playerData.mC > 0 ? 0 : 1
         
         if(document.activeElement.nodeName == 'CANVAS'){
           if(renderer.mouseButton == -1){
@@ -1457,7 +1394,7 @@ $file = <<<'FILE'
           if(!renderer.flyMode && renderer.mouseButton == 1) {
             switch(playerData.gS){
               case 0:
-                playerData.fM = playerData.mCt > 0
+                playerData.fM = playerData.mC > 0
                 fireMissile(playerData)
               break
               case 1:
@@ -1470,7 +1407,7 @@ $file = <<<'FILE'
             if(v) {
               switch(i){
                 case 90:
-                  playerData.fM = playerData.mCt > 0
+                  playerData.fM = playerData.mC > 0
                   fireMissile(playerData)
                 break
                 case 88:
@@ -1489,26 +1426,6 @@ $file = <<<'FILE'
             playervy = 0
           }
         }else{
-          /*
-          var pox = renderer.x
-          var poy = renderer.y
-          var poz = renderer.z
-          renderer.x += playervx
-          renderer.y += playervy
-          renderer.z += playervz
-          playervx += (renderer.x - pox) / 16
-          playervy += (renderer.y - poy) / 16
-          playervz += (renderer.z - poz) / 16
-          var d1 = Math.hypot(playervx, playervy, playervz) + .001
-          var d2 = Math.min(d1, maxPlayerVel)
-          playervx /= d1
-          playervy /= d1
-          playervz /= d1
-          playervx *= d2
-          playervy *= d2
-          playervz *= d2
-          */
-          
           playervy += grav
           renderer.y += playervy
           if(renderer.y > fl - 400){
@@ -1528,7 +1445,6 @@ $file = <<<'FILE'
             l[idx*3+0] = smoke.x += smoke.vx
             l[idx*3+1] = smoke.y += smoke.vy
             l[idx*3+2] = smoke.z += smoke.vz
-            //if(smoke.y < floor(smoke.x, smoke.z)) smoke.t = -smokeLife
           })
           await renderer.Draw(smokeParticles)
         }
@@ -1621,10 +1537,10 @@ $file = <<<'FILE'
               var py = floor(px, pz) + 600
               var d = Math.hypot(-playerData.x - px, playerData.y - py, -playerData.z - pz)
               if(d < 2e4){
-                if(d < 2e3){
+                if(d < 4e3){
                   startSound('powerup')
                   powerupAuras[o].nextRespawn = t + powerupRespawnSpeed
-                  playerData.mCt = Math.min(maxMissiles, playerData.mCt + o + 1)
+                  playerData.mC = Math.min(maxMissiles, playerData.mC + o + 1)
                 }else{
                   for(var i = sd == 1 ? 2: sd; i--;){
                     if(sd == 1 && i) continue
@@ -1720,7 +1636,7 @@ $file = <<<'FILE'
                 az = shape.vertices[i+2]
                 
                 var migx = cl*sp*mag*4
-                var migy = br*sp*mag*4 //rw*sp*mag*8
+                var migy = br*sp*mag*4
                 var migz = br*sp*mag*4
                 while(ax + nax + renderer.x > migx) nax -= migx * 2
                 while(ax + nax + renderer.x < -migx) nax += migx * 2
@@ -1753,11 +1669,9 @@ $file = <<<'FILE'
 
                 for(var m = 3; m--;){
                   ax += shape.vertices[i+m*3+0]
-                  //ay += shape.vertices[i+m*3+1]
                   az += shape.vertices[i+m*3+2]
                 }
                 ax /= 3
-                //ay /= 3
                 az /= 3
                 
                 var migx = cl*sp*mag * 1
@@ -1774,7 +1688,6 @@ $file = <<<'FILE'
                                               shape.vertices[i+m*3+2]) - 2e3
                 }
               }
-              //if(!((t*60|0)%240) || (t<.1)) Coordinates.SyncNormals(shape, true)
               await renderer.Draw(shape)
             break
             default:
@@ -1867,7 +1780,7 @@ $file = <<<'FILE'
             return ret
           })
           
-          playerData.pntd = false
+          playerData.pd = false
           missiles.map(async missile => {
 
             // heat-seeking
@@ -1888,7 +1801,7 @@ $file = <<<'FILE'
             if(midx != -1){
               if(players[midx].id == playerData.id){
                 startSound('radar warning')
-                playerData.pntd = true
+                playerData.pd = true
               }
               if(mind > missileSpeed * 1.5) {
                 var tx = -players[midx].x
@@ -1957,7 +1870,7 @@ $file = <<<'FILE'
             }
           })
           
-          if(!playerData.pntd){
+          if(!playerData.pd){
             stopSound('radar warning')
           }
         }
@@ -2018,9 +1931,6 @@ $file = <<<'FILE'
           while(az + naz + renderer.z < -migy) naz += migy*2
           
           var d = false
-          //var d = Math.hypot(floorParticles.vertices[i+0] + nax + renderer.x,
-            //            floorParticles.vertices[i+2] + naz + renderer.z) > migx*1.125
-          
           
           floorParticles.vertices[i+0] += nax
           floorParticles.vertices[i+2] += naz
@@ -2076,8 +1986,8 @@ $file = <<<'FILE'
         tPlayers.map(v=>{
           var tp = players.filter(q=>+q.id == +v.id)
           if(tp.length) {
-            tp[0].mST = v.mST
-            tp[0].cST = v.cST
+            tp[0].mS = v.mS
+            tp[0].cS = v.cS
           }
         })
         if(!players.filter(v=>+v.id==+playerData.id).length){
@@ -2094,8 +2004,6 @@ $file = <<<'FILE'
           players.map(player => {
             var l = iplayers.filter(v=> (+v.id == +player.id))
             if(l.length){
-              //l[0].name  = player.name
-              //l[0].id    = player.id
               var v = l[0]
               v.ar              = player.ar
               v.lv              = player.lv
@@ -2103,8 +2011,8 @@ $file = <<<'FILE'
               v.dm              = player.dm
               v.hM              = player.hM
               v.hC              = player.hC
-              v.mST             = player.mST
-              v.cST             = player.cST
+              v.mS             = player.mS
+              v.cS             = player.cS
               v.fM              = player.fM
               v.fC              = player.fC
               v.hl              = player.hl
@@ -2115,7 +2023,7 @@ $file = <<<'FILE'
               v.yaw             = player.yaw
               v.roll            = player.roll
               v.pitch           = player.pitch
-              v.pntd            = player.pntd
+              v.pd            = player.pd
               v.keep            = true
             }else{
               var newObj = {
@@ -2134,13 +2042,13 @@ $file = <<<'FILE'
               newObj.lv                = player.lv
               newObj.hM                = player.hM
               newObj.hC                = player.hC
-              newObj.mST               = player.mST
-              newObj.cST               = player.cST
+              newObj.mS               = player.mS
+              newObj.cS               = player.cS
               newObj.fM                = player.fM
               newObj.hl                = player.hl
               newObj.name              = player.name
               newObj.id                = +player.id
-              newObj.pntd              = player.pntd
+              newObj.pd              = player.pd
               newObj.x                 = newObj.ix     = player.x
               newObj.y                 = newObj.iy     = player.y
               newObj.z                 = newObj.iz     = player.z
@@ -2280,9 +2188,9 @@ $file = <<<'FILE'
             name: '', id: -1,
             hl: 1, al: true,
             y: floor(x, z) + 500,
-            gS: 0, mCt: 0,
+            gS: 0, mC: 0,
             roll: 0, pitch: 0, yaw: 0,
-            mST: 0, cST: 0,
+            mS: 0, cS: 0,
             ar: arena,
             lv: level,
             hM: true,
@@ -2297,15 +2205,15 @@ $file = <<<'FILE'
           playerData.al = true
           playerData.y = floor(x, z) + 500
           playerData.gS = 0
-          playerData.mCt = 0
+          playerData.mC = 0
           playerData.pitch = 0
-          playerData.mST = 0
-          playerData.cST = 0
+          playerData.mS = 0
+          playerData.cS = 0
           playerData.fM = false
           playerData.fC = false
           playerData.ip = false
           playerData.dm = 0
-          playerData.pntd = false
+          playerData.pd = false
           playerData.ar = arena
           playerData.lv = level
         }
@@ -2322,7 +2230,6 @@ $file = <<<'FILE'
     </script>
   </body>
 </html>
-
 FILE;
 file_put_contents('../../flock/index.php', $file);
 ?>
