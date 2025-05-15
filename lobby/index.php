@@ -74,7 +74,7 @@
           colorMix: 0,
           //yaw: .001,
           roll: -.004,
-          map: `level ${i+1} monochrome.jpg`,
+          map: `level ${i+1}.png`,
         }
         await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
           await shader.ConnectGeometry(geometry)
