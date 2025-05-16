@@ -12,7 +12,7 @@
     ✔ load-time optimizations (pre-resize everything)
     ✔  mute/unmute button
     ✔  exit/lobby button
-    * improve lobby graphics
+    ✔ improve lobby graphics
 -->
 
 <!DOCTYPE html>

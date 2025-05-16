@@ -42,7 +42,7 @@
 
       var shapes = []
       var geoOptions = {
-        shapeType: 'sprite',
+        shapeType: 'rectangle',
         name: 'splash',
         scaleX: 16/9,
         size: 13.5,
@@ -52,8 +52,8 @@
         map: splashImg,
       }
       await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
-        shapes.push(geometry)
-        //await shader.ConnectGeometry(geometry)
+        //shapes.push(geometry)
+        await shader.ConnectGeometry(geometry)
       })
       
       
@@ -65,7 +65,7 @@
       var levelTiles = []
       for(var i = 0; i<5; i++){
         var geoOptions = {
-          shapeType: 'rectangle',
+          shapeType: 'sprite',
           scaleX: 512/358,
           involveCache: false,
           size: 2,
@@ -77,7 +77,7 @@
           map: `level ${i+1}.png`,
         }
         await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
-          await shader.ConnectGeometry(geometry)
+          //await shader.ConnectGeometry(geometry)
           levelTiles = [...levelTiles, geometry]
         })
       }
@@ -164,6 +164,7 @@
             if(renderer.mouseButton == 1 && pip) curSel = idx
             
           }
+          tile.alpha = 2 - (tile.z + 25) / 25
           renderer.Draw(tile)
         })
         

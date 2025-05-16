@@ -12,7 +12,8 @@ $file = <<<'FILE'
     ✔ 'sessions' engine w/ max players
     ✔ join-link w/ copy button
     ✔ load-time optimizations (pre-resize everything)
-    *  mute button
+    ✔  mute/unmute button
+    ✔  exit/lobby button
     * improve lobby graphics
 -->
 
@@ -76,22 +77,38 @@ $file = <<<'FILE'
         color: #fff;
         text-shadow: 2px 2px 3px #40f;
       }
-      .copyButton{
+      .toolButtons{
         cursor: pointer;
         opacity: .85;
         position: fixed;
         z-index: 100;
         top: 5px;
-        right: 5px;
-        width: 30px;
-        height: 33px;
-        background-image: url(copy.png);
+        width: 40px;
+        height: 45px;
         background-position: center center;
         background-size: contain;
         background-repeat: no-repeat;
         background-color: transparent;
         border: none;
         display: inline-block;
+      }
+      .copyButton{
+        right: 5px;
+        background-image: url(copy.png);
+      }
+      .lobbyButton{
+        right: 205px;
+        background-image: url(lobby.png);
+      }
+      .mutedButton{
+        right: 50vw;
+        transform: translate(-50%);
+        background-image: url(muted.png);
+      }
+      .unmutedButton{
+        right: 50vw;
+        transform: translate(-50%);
+        background-image: url(unmuted.png);
       }
       #copyConfirmation{
         display: none;
@@ -131,9 +148,26 @@ $file = <<<'FILE'
       />
     </label>
     <button
-      class="copyButton"
+      class="copyButton toolButtons"
       onclick="copyLink()"
       title="copy arena link"
+    ></button>
+    <button
+      class="lobbyButton toolButtons"
+      onclick="exitToLobby()"
+      title="exit to lobby"
+    ></button>
+    <button
+      class="unmutedButton toolButtons"
+      style="display: inline-block"
+      onclick="toggleMute(1)"
+      title="mute audio"
+    ></button>
+    <button
+      class="mutedButton toolButtons"
+      style="display: none"
+      onclick="toggleMute(0)"
+      title="unmute audio"
     ></button>
     <span class="toolCaption">arena link</span>
     <div class="overlay">
@@ -153,6 +187,7 @@ $file = <<<'FILE'
       var reconnectionAttempts = 0
       var gameLoaded = false
       var lerpFactor = 20
+      var muted      = false
       var players    = []
       var iplayers   = []  // ip local mirror
 
@@ -176,7 +211,9 @@ $file = <<<'FILE'
             return  -Math.hypot(X, Z) 
           break
           case 3:
-            return Math.min(8, Math.max(-.25, (S(X/2e3+renderer.t/8) * S(Z/2e3) + S(X/2500) * S(Z/2500+renderer.t * 3 / 8)) ** 3)) * 2e3
+            var p = Math.atan2(X, Z)
+            var d = Math.hypot(X, Z)
+            return Math.min(1e4, Math.max(-1e4, Math.min(1, d/2e4) * C(X/2e4) * C(Z/2e4))* 3e4)
           break
           case 4:
             var d = Math.hypot(X, Z)
@@ -427,6 +464,7 @@ $file = <<<'FILE'
       })
       
       const startSound = (soundName, volume=1) => {
+        if(muted) return
         if(!navigator.userActivation.hasBeenActive) return
         var sound = sounds.filter(v=>v.name == soundName)
         if(sound.length){
@@ -2062,6 +2100,21 @@ $file = <<<'FILE'
         }
       }
       
+      window.exitToLobby = () => location.href = './lobby'
+      
+      window.toggleMute = muteState => {
+        muted = muteState
+        if(muted){
+          sounds.forEach(sound => stopSound(sound.name))
+          document.querySelector('.mutedButton').style.display = 'inline-block'
+          document.querySelector('.unmutedButton').style.display = 'none'
+        }else{
+          startSound('music')
+          document.querySelector('.mutedButton').style.display = 'none'
+          document.querySelector('.unmutedButton').style.display = 'inline-block'
+        }
+      }
+      
       window.copyLink = () => {
         let copyEl = document.createElement('div')
         copyEl.innerHTML = location.origin + location.pathname + `?arena=${arena}`
@@ -2230,6 +2283,7 @@ $file = <<<'FILE'
     </script>
   </body>
 </html>
+
 FILE;
 file_put_contents('../../flock/index.php', $file);
 ?>

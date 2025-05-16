@@ -44,7 +44,7 @@ $file = <<<'FILE'
 
       var shapes = []
       var geoOptions = {
-        shapeType: 'sprite',
+        shapeType: 'rectangle',
         name: 'splash',
         scaleX: 16/9,
         size: 13.5,
@@ -54,8 +54,8 @@ $file = <<<'FILE'
         map: splashImg,
       }
       await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
-        shapes.push(geometry)
-        //await shader.ConnectGeometry(geometry)
+        //shapes.push(geometry)
+        await shader.ConnectGeometry(geometry)
       })
       
       
@@ -67,7 +67,7 @@ $file = <<<'FILE'
       var levelTiles = []
       for(var i = 0; i<5; i++){
         var geoOptions = {
-          shapeType: 'rectangle',
+          shapeType: 'sprite',
           scaleX: 512/358,
           involveCache: false,
           size: 2,
@@ -76,10 +76,10 @@ $file = <<<'FILE'
           colorMix: 0,
           //yaw: .001,
           roll: -.004,
-          map: `level ${i+1} monochrome.jpg`,
+          map: `level ${i+1}.png`,
         }
         await Coordinates.LoadGeometry(renderer, geoOptions).then(async (geometry) => {
-          await shader.ConnectGeometry(geometry)
+          //await shader.ConnectGeometry(geometry)
           levelTiles = [...levelTiles, geometry]
         })
       }
@@ -166,6 +166,7 @@ $file = <<<'FILE'
             if(renderer.mouseButton == 1 && pip) curSel = idx
             
           }
+          tile.alpha = 2 - (tile.z + 25) / 25
           renderer.Draw(tile)
         })
         
@@ -177,6 +178,7 @@ $file = <<<'FILE'
     </script>
   </body>
 </html>
+
 
 FILE;
 file_put_contents('../../flock/lobby/index.php', $file);
