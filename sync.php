@@ -13,8 +13,19 @@
               data = \"$sanitizedData\"
               WHERE id = $id AND arena LIKE BINARY \"$arena\"";
       mysqli_query($link, $sql);
+
       
       // maintenance //
+      
+      $sql = "SELECT id, slug, seen, data FROM sessions";
+      $res = mysqli_query($link, $sql);
+      for($i=0; $i<mysqli_num_rows($res); ++$i){
+        $row = mysqli_fetch_assoc($res);
+        $seen = date(strtotime($row['seen']));
+        $now = time();
+        if($now - $seen > 8) endSession($row['slug']);
+      }
+      
       $players = [];
       $sql = "SELECT id, slug, seen, data FROM sessions
                 WHERE arena LIKE BINARY \"$arena\"";
@@ -23,11 +34,11 @@
         $row = mysqli_fetch_assoc($res);
         $seen = date(strtotime($row['seen']));
         $now = time();
-        if($now - $seen > 8){
-          endSession($row['slug']);
-        } else {
+        //if($now - $seen > 8){
+        //  endSession($row['slug']);
+        //} else {
           array_push($players, $row['data']);
-        }
+        //}
       }
       /////////////////
       
